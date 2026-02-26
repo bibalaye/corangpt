@@ -27,10 +27,11 @@ _REWRITE_SYSTEM_PROMPT = (
 
 class LLMService:
     def __init__(self):
-        api_key = getattr(settings, 'GEMINI_API_KEY', "AIzaSyBA03qJDjzmQyj0RT9xLyndDsmgxOdx-ng")
-        if api_key:
+        api_key = getattr(settings, 'GEMINI_API_KEY', None)
+        if api_key and api_key.lower() not in ('none', ''):
             genai.configure(api_key=api_key)
             self.model = genai.GenerativeModel('gemini-3-flash-preview')
+            logger.info(f"LLMService initialized with key {api_key[:8]}...{api_key[-4:]}")
         else:
             self.model = None
             logger.warning("GEMINI_API_KEY is not configured.")
@@ -106,6 +107,58 @@ class LLMService:
         except Exception as e:
             logger.exception(f"Erreur lors de l'appel à Gemini: {e}")
             return "Une erreur est survenue lors de la génération de la réponse."
+
+    def generate_response_stream(self, question: str, contexts: list):
+        """
+        Generator that yields text chunks from Gemini streaming.
+
+        Uses the same prompt as generate_response but streams
+        the output token by token for real-time display.
+        """
+        if not self.model:
+            yield "Désolé, le service LLM n'est pas configuré."
+            return
+
+        # Format context
+        context_str = ""
+        for ctx in contexts:
+            context_str += (
+                f"- {ctx['reference']} :\n"
+                f"  Texte Arabe : {ctx['text_ar']}\n"
+                f"  Traduction Française : {ctx['text_fr']}\n\n"
+            )
+
+        system_instruction = (
+            "Tu es un assistant coranique bienveillant et érudit. "
+            "Ta mission est d'aider les utilisateurs à comprendre le Coran "
+            "en t'appuyant sur les versets qui te sont fournis en contexte.\n\n"
+            "Comment répondre :\n"
+            "- Utilise un langage naturel, fluide et chaleureux, comme un savant qui explique avec douceur.\n"
+            "- Base tes réponses UNIQUEMENT sur les versets fournis dans le contexte ci-dessous.\n"
+            "- Cite toujours la sourate et le numéro du verset entre parenthèses, par exemple (Sourate Al-Baqara, 2:153).\n"
+            "- Explique le sens des versets de manière accessible, en les reliant à la question posée.\n"
+            "- Tu peux reformuler, contextualiser et enrichir ta réponse pour la rendre pédagogique.\n"
+            "- Si les versets fournis répondent clairement à la question, n'hésite pas à le dire avec assurance.\n"
+            "- Si aucun verset du contexte ne traite du sujet demandé, réponds simplement :\n"
+            "  \"Je ne trouve pas de réponse claire dans les versets qui me sont fournis.\"\n\n"
+            "Garde toujours un ton respectueux, bienveillant et accessible."
+        )
+
+        prompt = (
+            f"{system_instruction}\n\n"
+            f"CONTEXTE :\n{context_str}\n"
+            f"QUESTION : {question}\n\n"
+            f"RÉPONSE :"
+        )
+
+        try:
+            response = self.model.generate_content(prompt, stream=True)
+            for chunk in response:
+                if chunk.text:
+                    yield chunk.text
+        except Exception as e:
+            logger.exception(f"Streaming error: {e}")
+            yield f"\n\n[Erreur: {str(e)}]"
 
 # Singleton instance
 _llm_service = None

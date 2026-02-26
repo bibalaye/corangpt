@@ -10,11 +10,14 @@
 |----------------|-------------|
 | **Recherche sémantique** | Trouve des versets par sens, pas par mots-clés exacts |
 | **Assistant IA (RAG)** | Répond aux questions complexes en citant les versets appropriés |
+| **Streaming temps réel** | Réponse affichée token par token avec curseur clignotant |
 | **Anti-hallucination** | L'IA ne répond que si la réponse est présente dans le Coran |
 | **Bilingue** | Arabe (Uthmani) + Français (Hamidullah) |
 | **Normalisation NLP** | Gestion des accents, harakat arabes et variantes orthographiques |
 | **Query Rewriting** | Reformulation automatique des questions longues pour une meilleure recherche |
-| **Frontend premium** | Interface chat inspirée de Claude — design crème, élégant et responsive |
+| **Multi-conversations** | Historique des conversations avec sidebar, création et suppression |
+| **Thème clair / sombre** | Toggle avec persistence localStorage + détection OS |
+| **Frontend premium** | React + Tailwind CSS, design ChatGPT/Claude, responsive mobile |
 
 ---
 
@@ -28,23 +31,40 @@ iacoran/
 │   └── wsgi.py                    # Point d'entrée WSGI
 │
 ├── quran_api/                     # Application Django principale
-│   ├── views.py                   # Endpoints REST (Search + Ask)
+│   ├── views.py                   # Endpoints REST + streaming
 │   ├── urls.py                    # Routes de l'API
 │   └── services/                  # Couche de services métier
 │       ├── vector_service.py      # Recherche vectorielle FAISS + normalisation
-│       ├── llm_service.py         # Gemini LLM + Query Rewriting
+│       ├── llm_service.py         # Gemini LLM + Query Rewriting + Streaming
 │       └── text_utils.py          # Normalisation FR/AR (accents, harakat)
 │
-├── frontend/                      # Interface utilisateur (Vite + TypeScript)
-│   ├── index.html                 # Structure HTML
+├── frontend/                      # Interface React (Vite + TypeScript + Tailwind)
+│   ├── index.html                 # Entry HTML
+│   ├── tailwind.config.js         # Palette, animations, dark mode
+│   ├── vite.config.ts             # React plugin + API proxy
 │   └── src/
-│       ├── main.ts                # Logique chat + interactions
-│       └── style.css              # Design premium (Claude-inspired)
+│       ├── main.tsx               # Point d'entrée React
+│       ├── App.tsx                # Root component
+│       ├── index.css              # Tailwind + styles custom
+│       ├── types/chat.ts          # Types TypeScript
+│       ├── lib/api.ts             # Client streaming NDJSON
+│       ├── hooks/
+│       │   ├── useChat.ts         # State management conversations
+│       │   └── useTheme.ts        # Toggle dark/light
+│       └── components/
+│           ├── ChatLayout.tsx     # Layout principal
+│           ├── Sidebar.tsx        # Historique conversations
+│           ├── MessageBubble.tsx  # Bulles messages + markdown
+│           ├── ChatInput.tsx      # Input auto-resize + send/stop
+│           ├── WelcomeScreen.tsx  # Écran d'accueil + suggestions
+│           └── QuranVerse.tsx     # Citation coranique stylée
 │
 ├── index_quran.py                 # Script d'indexation des versets
 ├── quran_complet.json             # Données brutes (6236 versets AR + FR)
 ├── quran_indexed.json             # Données indexées + embeddings + texte normalisé
 ├── quran_faiss.index              # Index binaire FAISS
+├── requirements.txt               # Dépendances Python gelées
+├── .gitignore                     # Fichiers exclus du versionning
 └── .env                           # Variables d'environnement (non commitées)
 ```
 
@@ -99,17 +119,21 @@ Le module `text_utils.py` résout les problèmes classiques de matching texte :
 ## 🛠️ Stack Technique
 
 ### Backend
-- **Django 5** + Django REST Framework
+- **Django 6** + Django REST Framework
 - **FAISS** (Facebook AI Similarity Search) — recherche vectorielle
 - **SentenceTransformers** — modèle `intfloat/multilingual-e5-base` (768 dimensions)
-- **Google Gemini 3 Flash** — LLM pour le query rewriting et la génération de réponses
+- **Google Gemini 3 Flash** — LLM (query rewriting, génération, **streaming**)
+- **StreamingHttpResponse** — streaming NDJSON pour réponses temps réel
 - **Python 3.11+**
 
 ### Frontend
-- **Vite 8** + TypeScript
-- Design inspiré de **Claude** — palette crème/beige, typographie Inter/Outfit/Amiri
-- Responsive avec sidebar coulissante sur mobile
-- Micro-animations (hover, slide-in, pulse)
+- **React 19** + TypeScript + **Tailwind CSS 3**
+- **Vite 6** — bundler avec proxy API intégré
+- **react-markdown** + remark-gfm — rendu Markdown dans les réponses
+- Design inspiré de **ChatGPT / Claude** — palette crème/beige, typographie Inter/Amiri
+- Streaming temps réel avec `ReadableStream` + curseur clignotant
+- Multi-conversations + thème clair/sombre + responsive mobile
+- Micro-animations (fade-in-up, pulse-dot, cursor-blink, gentle-float)
 
 ---
 
@@ -202,6 +226,7 @@ python manage.py runserver
 - Admin Django : http://localhost:8000/admin/
 - API Search : http://localhost:8000/api/search/?q=patience
 - API Ask : http://localhost:8000/api/ask/ (POST)
+- API Stream : http://localhost:8000/api/ask/stream/ (POST, streaming)
 
 ---
 
@@ -256,9 +281,9 @@ Retourne les versets les plus proches sémantiquement de la requête.
 GET /api/search/?q=importance de la charité&limit=3
 ```
 
-### 2. Assistant IA (Questions/Réponses)
+### 2. Assistant IA (non-streaming)
 
-Génère une réponse structurée basée sur les versets trouvés.
+Génère une réponse complète (attend la fin avant de répondre).
 
 - **URL** : `POST /api/ask/`
 - **Corps (JSON)** :
@@ -270,20 +295,29 @@ Génère une réponse structurée basée sur les versets trouvés.
 }
 ```
 
-- **Réponse** :
+### 3. Assistant IA (streaming) ⚡
 
-```json
-{
-  "question": "Comment le Coran décrit-il la création de l'univers ?",
-  "answer": "Le Coran évoque la création de l'univers...",
-  "sources": [
-    {
-      "reference": "Sourate 21 (Al-Anbiya), Verset 30",
-      "text_ar": "...",
-      "text_fr": "..."
-    }
-  ]
-}
+Stream la réponse token par token via NDJSON (Newline-Delimited JSON).
+C'est l'endpoint utilisé par le frontend React.
+
+- **URL** : `POST /api/ask/stream/`
+- **Corps (JSON)** : identique à `/api/ask/`
+- **Protocole** : NDJSON — chaque ligne est un événement JSON :
+
+```jsonl
+{"type": "sources", "data": [{"reference": "...", "text_ar": "...", "text_fr": "..."}]}
+{"type": "token",   "data": "Le "}
+{"type": "token",   "data": "Coran "}
+{"type": "token",   "data": "dit..."}
+{"type": "done"}
+```
+
+| Événement | Description |
+|-----------|-------------|
+| `sources` | Versets coraniques utilisés comme contexte |
+| `token` | Fragment de texte de la réponse LLM |
+| `done` | Génération terminée |
+| `error` | Message d'erreur |
 ```
 
 ---
@@ -306,6 +340,10 @@ Génère une réponse structurée basée sur les versets trouvés.
 | Query Rewriting (Gemini) | ⭐⭐⭐⭐⭐ | ✅ |
 | Préfixe E5 (`query:` / `passage:`) | ⭐⭐⭐⭐⭐ | ✅ |
 | top_k étendu (10 → LLM filtre) | ⭐⭐⭐ | ✅ |
+| Streaming temps réel (NDJSON) | ⭐⭐⭐⭐⭐ | ✅ |
+| Frontend React + Tailwind | ⭐⭐⭐⭐⭐ | ✅ |
+| Multi-conversations + thèmes | ⭐⭐⭐⭐ | ✅ |
+| Rendu Markdown (react-markdown) | ⭐⭐⭐ | ✅ |
 | Hybrid Search (BM25 + Vector) | ⭐⭐⭐⭐⭐ | 🔜 |
 | Re-ranking (Cross-Encoder) | ⭐⭐⭐⭐ | 🔜 |
 

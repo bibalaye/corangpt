@@ -1,0 +1,127 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+
+    /* Smooth scrolling everywhere */
+    * {
+        scroll-behavior: smooth;
+    }
+
+    /* Custom selection color */
+    ::selection {
+        background: rgba(196, 132, 62, 0.2);
+        color: inherit;
+    }
+
+    /* Scrollbar styling — light */
+    ::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #d0c9bc;
+        border-radius: 4px;
+    }
+
+    /* Dark mode scrollbars */
+    .dark ::-webkit-scrollbar-thumb {
+        background: #3a3a3a;
+    }
+
+    /* Firefox scrollbar */
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: #d0c9bc transparent;
+    }
+
+    .dark * {
+        scrollbar-color: #3a3a3a transparent;
+    }
+
+    body {
+        @apply antialiased;
+    }
+}
+
+@layer components {
+
+    /* Quran verse block */
+    .quran-verse-block {
+        @apply border-l-[3px] border-amber-600/40 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-500/30 rounded-r-lg p-4 my-3;
+    }
+
+    /* Markdown prose styles */
+    .prose-chat {
+        @apply leading-relaxed;
+    }
+
+    .prose-chat p {
+        @apply mb-3 last:mb-0;
+    }
+
+    .prose-chat ul,
+    .prose-chat ol {
+        @apply ml-5 mb-3 space-y-1;
+    }
+
+    .prose-chat ul {
+        @apply list-disc;
+    }
+
+    .prose-chat ol {
+        @apply list-decimal;
+    }
+
+    .prose-chat strong {
+        @apply font-semibold;
+    }
+
+    .prose-chat blockquote {
+        @apply quran-verse-block italic;
+    }
+
+    .prose-chat code {
+        @apply bg-stone-200 dark:bg-stone-700 px-1.5 py-0.5 rounded text-sm font-mono;
+    }
+
+    .prose-chat pre {
+        @apply bg-stone-200 dark:bg-stone-800 p-3 rounded-lg overflow-x-auto mb-3;
+    }
+
+    .prose-chat pre code {
+        @apply bg-transparent p-0;
+    }
+
+    .prose-chat h1,
+    .prose-chat h2,
+    .prose-chat h3 {
+        @apply font-semibold mt-4 mb-2;
+    }
+
+    .prose-chat h1 {
+        @apply text-xl;
+    }
+
+    .prose-chat h2 {
+        @apply text-lg;
+    }
+
+    .prose-chat h3 {
+        @apply text-base;
+    }
+}
+
+@layer utilities {
+
+    /* Gradient mask for scroll fade */
+    .scroll-fade-bottom {
+        mask-image: linear-gradient(to top, transparent, black 48px);
+        -webkit-mask-image: linear-gradient(to top, transparent, black 48px);
+    }
+}

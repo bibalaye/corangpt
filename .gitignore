@@ -37,6 +37,8 @@ static_collected/
 # ============================================================
 quran_indexed.json
 quran_faiss.index
+# Allow the zip for Docker deployment
+!quran_indexed.zip
 *.h5
 *.pkl
 *.pt

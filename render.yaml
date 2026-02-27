@@ -1,0 +1,35 @@
+services:
+  # --- BACKEND (Django + AI Model) ---
+  - type: web
+    name: quran-backend
+    env: docker
+    dockerContext: .
+    dockerfilePath: Dockerfile.backend
+    plan: free # Note: Free plan has 512MB RAM. Consider 'starter' for 1GB (needed for E5 model).
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_ALLOWED_HOSTS
+        value: "*"
+      - key: PORT
+        value: "8000"
+
+  # --- FRONTEND (React) ---
+  - type: web
+    name: quran-frontend
+    env: docker
+    dockerContext: .
+    dockerfilePath: Dockerfile.frontend
+    plan: free
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: VITE_API_URL
+        fromService:
+          name: quran-backend
+          type: web
+          property: host

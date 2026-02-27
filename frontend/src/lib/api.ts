@@ -1,12 +1,6 @@
-/**
- * API client for the Quran backend.
- *
- * Uses the Vite proxy (/api → localhost:8000) so no CORS issues in dev.
- */
-
 import type { StreamEvent } from '../types/chat'
 
-const API_BASE = '/api'
+const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
 /**
  * Stream a question to the Quran AI.
@@ -17,7 +11,7 @@ const API_BASE = '/api'
 export async function streamQuestion(
     question: string,
     callbacks: {
-        onSources: (sources: StreamEvent extends { type: 'sources' } ? StreamEvent['data'] : never) => void
+        onSources: (sources: any[]) => void
         onToken: (token: string) => void
         onDone: () => void
         onError: (error: string) => void

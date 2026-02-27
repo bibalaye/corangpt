@@ -5,6 +5,11 @@ export default defineConfig({
     plugins: [react()],
     server: {
         port: 3000,
+        allowedHosts: [
+            'corangpt.onrender.com',
+            'corangpt.fly.dev',
+            'localhost'
+        ],
         proxy: {
             '/api': {
                 target: 'http://localhost:8000',

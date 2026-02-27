@@ -37,8 +37,13 @@ static_collected/
 # ============================================================
 quran_indexed.json
 quran_faiss.index
+hadith_indexed.json
+hadith_faiss.index
 # Allow the zip for Docker deployment
 !quran_indexed.zip
+!hadith_indexed.zip
+
+
 *.h5
 *.pkl
 *.pt
@@ -63,7 +68,8 @@ node_modules/
 frontend/dist/
 frontend/.vite/
 *.tsbuildinfo
-
+./mobile/node_modules
+/mobile
 # ============================================================
 # Misc
 # ============================================================

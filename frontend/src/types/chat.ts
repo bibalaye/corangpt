@@ -5,6 +5,7 @@ export interface QuranVerse {
     text_ar: string
     text_fr: string
     score?: number
+    source_type?: 'Coran' | 'Hadith'
     normalized_fr?: string
     normalized_ar?: string
     metadata?: {
@@ -35,4 +36,4 @@ export type StreamEvent =
     | { type: 'sources'; data: QuranVerse[] }
     | { type: 'token'; data: string }
     | { type: 'done' }
-    | { type: 'error'; data: string }
+    | { type: 'error'; data: string; error_code?: string; reset_time?: string }

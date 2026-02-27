@@ -1,351 +1,200 @@
-# 📖 IA Coran — Assistant Coranique Intelligent
+# 📖 IA Coran — Assistant Coranique et Prophétique Intelligent
 
-> Moteur de recherche sémantique et assistant RAG (Retrieval-Augmented Generation) basé sur le Saint Coran. Posez vos questions en langage naturel et recevez des réponses sourcées, précises et sans hallucination.
+> Moteur de recherche sémantique et assistant RAG (Retrieval-Augmented Generation) basé sur le Saint Coran et les Hadiths authentiques (Sahih al-Bukhari). Posez vos questions en langage naturel et recevez des réponses sourcées, précises et sans hallucination.
 
 ---
 
-## ✨ Fonctionnalités
+## ✨ Fonctionnalités Principales
 
 | Fonctionnalité | Description |
 |----------------|-------------|
-| **Recherche sémantique** | Trouve des versets par sens, pas par mots-clés exacts |
-| **Assistant IA (RAG)** | Répond aux questions complexes en citant les versets appropriés |
+| **Recherche Hybride Sémantique** | Trouve des versets coraniques et des ahadith par sens via l'IA |
+| **Filtres de Sources** | Recherche au choix : `Coran uniquement`, `Hadith uniquement` ou `Les deux` |
+| **Assistant IA (RAG)** | Répond aux questions complexes en citant les textes avec extrême précision |
 | **Streaming temps réel** | Réponse affichée token par token avec curseur clignotant |
-| **Anti-hallucination** | L'IA ne répond que si la réponse est présente dans le Coran |
-| **Bilingue** | Arabe (Uthmani) + Français (Hamidullah) |
-| **Normalisation NLP** | Gestion des accents, harakat arabes et variantes orthographiques |
-| **Query Rewriting** | Reformulation automatique des questions longues pour une meilleure recherche |
-| **Multi-conversations** | Historique des conversations avec sidebar, création et suppression |
-| **Thème clair / sombre** | Toggle avec persistence localStorage + détection OS |
-| **Frontend premium** | React + Tailwind CSS, design ChatGPT/Claude, responsive mobile |
+| **Anti-hallucination** | L'IA ne répond que si la réponse est présente dans les textes fondateurs |
+| **Normalisation NLP Avancée**| Gestion des accents, harakat arabes et variantes orthographiques |
+| **Comptes et Abonnements** | Système d'authentification utilisateur et de limitations quotidiennes |
+| **Multi-conversations** | Historique persistant des conversations avec barre latérale style ChatGPT |
+| **Thème Clair / Sombre** | Basculement automatique et manuel du mode sombre (persistant) |
+| **Interface Premium** | Client React + Tailwind CSS ultramoderne copiant l'UX millimétrée de ChatGPT |
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Architecture du Projet
 
-```
+```text
 iacoran/
-├── core/                          # Configuration Django
+├── core/                          # Configuration principale Django
 │   ├── settings.py                # Variables d'environnement, config centralisée
-│   ├── urls.py                    # Routage principal
-│   └── wsgi.py                    # Point d'entrée WSGI
+│   └── urls.py                    # Routage principal API
 │
-├── quran_api/                     # Application Django principale
-│   ├── views.py                   # Endpoints REST + streaming
-│   ├── urls.py                    # Routes de l'API
-│   └── services/                  # Couche de services métier
-│       ├── vector_service.py      # Recherche vectorielle FAISS + normalisation
-│       ├── llm_service.py         # Gemini LLM + Query Rewriting + Streaming
-│       └── text_utils.py          # Normalisation FR/AR (accents, harakat)
+├── quran_api/                     # Application Django (Logique Serveur)
+│   ├── views.py                   # Endpoints REST (Auth, Search, Ask, Streaming limités)
+│   ├── models.py                  # Modèles BDD (UserProfile, SubscriptionPlan)
+│   ├── serializers.py             # DRF Serializers
+│   └── services/                  # Couche logique métier
+│       ├── vector_service.py      # Recherche vectorielle multi-sources (FAISS Coran + Hadith)
+│       ├── llm_service.py         # Gemini LLM + Query Rewriting + Streaming RAG
+│       └── text_utils.py          # Normalisation NLP FR/AR
 │
-├── frontend/                      # Interface React (Vite + TypeScript + Tailwind)
-│   ├── index.html                 # Entry HTML
-│   ├── tailwind.config.js         # Palette, animations, dark mode
-│   ├── vite.config.ts             # React plugin + API proxy
-│   └── src/
-│       ├── main.tsx               # Point d'entrée React
-│       ├── App.tsx                # Root component
-│       ├── index.css              # Tailwind + styles custom
-│       ├── types/chat.ts          # Types TypeScript
-│       ├── lib/api.ts             # Client streaming NDJSON
-│       ├── hooks/
-│       │   ├── useChat.ts         # State management conversations
-│       │   └── useTheme.ts        # Toggle dark/light
-│       └── components/
-│           ├── ChatLayout.tsx     # Layout principal
-│           ├── Sidebar.tsx        # Historique conversations
-│           ├── MessageBubble.tsx  # Bulles messages + markdown
-│           ├── ChatInput.tsx      # Input auto-resize + send/stop
-│           ├── WelcomeScreen.tsx  # Écran d'accueil + suggestions
-│           └── QuranVerse.tsx     # Citation coranique stylée
+├── frontend/                      # Interface Utilisateur React
+│   ├── src/
+│   │   ├── main.tsx               # Entry point
+│   │   ├── App.tsx                # App root + gestion Auth
+│   │   ├── lib/api.ts             # Client d'API (fetch standard + NDJSON streaming)
+│   │   ├── hooks/                 # Hooks de logique (useChat, useAudioSettings)
+│   │   └── components/            # Composants UI
+│   │       ├── ChatLayout.tsx     # Structure principale
+│   │       ├── Sidebar.tsx        # Barre latérale (Historique & Profil)
+│   │       ├── MessageBubble.tsx  # Affichage message User / Assistant (Prose/Markdown)
+│   │       ├── ChatInput.tsx      # Champ de saisie multi-lignes + Filtres Coran/Hadith
+│   │       ├── LimitModal.tsx     # Modale de dépassement de quota (Style premium)
+│   │       └── WelcomeScreen.tsx  # Écran plat de démarrage
 │
-├── index_quran.py                 # Script d'indexation des versets
-├── quran_complet.json             # Données brutes (6236 versets AR + FR)
-├── quran_indexed.json             # Données indexées + embeddings + texte normalisé
-├── quran_faiss.index              # Index binaire FAISS
-├── requirements.txt               # Dépendances Python gelées
-├── .gitignore                     # Fichiers exclus du versionning
-└── .env                           # Variables d'environnement (non commitées)
+├── scripts de données/            # ETL pour l'IA
+│   ├── fetch_hadith.py            # Scraping/Récupération des Ahadith
+│   ├── index_hadith.py            # Transformation des ahadith en vecteurs E5
+│   ├── index_quran.py             # Transformation du Coran complet en vecteurs E5
+│   └── seed_plans.py              # Script d'initialisation des plans d'abonnement
+│
+├── [bases de connaissances]       # Fichiers volumineux (générés)
+│   ├── quran_complet.json / bukhari_complet.json   # Données textuelles brutes
+│   ├── quran_indexed.json / hadith_indexed.json    # Méta-données et embbedings bruts
+│   └── quran_faiss.index / hadith_faiss.index      # Index binaires ultra-rapides générés
+│
+└── requirements.txt               # Dépendances Backend (Python)
 ```
 
 ---
 
-## 🧠 Pipeline RAG
+## 🧠 Pipeline RAG Multi-Sources
 
-Le cœur du système suit un pipeline d'optimisation en 4 étapes :
+Le cœur du système repose sur un pipeline de "Retrieval-Augmented Generation" robuste :
 
-```
-Question utilisateur
-        │
-        ▼
-┌───────────────────────────────┐
-│ 1. QUERY REWRITING (Gemini)   │  Questions longues → mots-clés optimisés
-│    "Explique les règles du    │  → "jeûne Ramadan règles sawm صيام"
-│     jeûne pendant Ramadan"    │
-└───────────────────────────────┘
-        │
-        ▼
-┌───────────────────────────────┐
-│ 2. NORMALISATION              │  Accents FR + Harakat AR supprimés
-│    "jeune ramadan regles"     │  → Matching cohérent query ↔ index
-└───────────────────────────────┘
-        │
-        ▼
-┌───────────────────────────────┐
-│ 3. VECTOR SEARCH (FAISS)      │  top_k=10, modèle E5 multilingual
-│    → 10 versets candidats     │  Préfixe "query: " pour E5
-└───────────────────────────────┘
-        │
-        ▼
-┌───────────────────────────────┐
-│ 4. LLM GENERATION (Gemini)    │  Réponse naturelle et pédagogique
-│    → Réponse + sources        │  basée sur la question ORIGINALE
-└───────────────────────────────┘
+```mermaid
+graph TD;
+    Q[Question Utilisateur] --> R[Query Rewriting Gemini]
+    R --> N[Normalisation NLP]
+    
+    N --> V_Q[Vector Search Coran FAISS]
+    N --> V_H[Vector Search Hadith FAISS]
+    
+    V_Q --> F[Filtrage Actif Interface]
+    V_H --> F
+    
+    F --> C[Top Résultats Combinés]
+    C --> G[LLM Prompting & Streaming Gemini ⚡]
+    G --> U[Frontend React UI]
 ```
 
-### Normalisation NLP
-
-Le module `text_utils.py` résout les problèmes classiques de matching texte :
-
-| Problème | Avant | Après normalisation |
-|----------|-------|---------------------|
-| Accents FR | `Ramadān` ≠ `ramadan` | `ramadan` = `ramadan` ✅ |
-| Casse | `Jeûne` ≠ `jeune` | `jeune` = `jeune` ✅ |
-| Harakat AR | `صِيَامُ` ≠ `صيام` | `صيام` = `صيام` ✅ |
-| Variantes Alif | `إِ` / `أَ` / `آ` → `ا` | Unifié ✅ |
+### Normalisation
+Le module `text_utils.py` garantit qu'aucune subtilité linguistique ne perturbera la recherche.
+- `صِيَامُ` → `صيام`
+- `Jeûne` → `jeune`
 
 ---
 
 ## 🛠️ Stack Technique
 
-### Backend
-- **Django 6** + Django REST Framework
-- **FAISS** (Facebook AI Similarity Search) — recherche vectorielle
-- **SentenceTransformers** — modèle `intfloat/multilingual-e5-base` (768 dimensions)
-- **Google Gemini 3 Flash** — LLM (query rewriting, génération, **streaming**)
-- **StreamingHttpResponse** — streaming NDJSON pour réponses temps réel
-- **Python 3.11+**
+### Backend (Python/Django)
+- **Django 5+** + Django REST Framework (API et système d'authentification)
+- **FAISS (CPU/GPU)** — Recherche par distance L2 dans l'espace vectoriel dense
+- **SentenceTransformers** — Modèle d'embedding `intfloat/multilingual-e5-base`
+- **Google Gemini 1.5 Flash** — LLM de haut vol assurant rapidité et fidélité de restitution
+- **SQLite** — Base de données utilisateur/usage
 
-### Frontend
-- **React 19** + TypeScript + **Tailwind CSS 3**
-- **Vite 6** — bundler avec proxy API intégré
-- **react-markdown** + remark-gfm — rendu Markdown dans les réponses
-- Design inspiré de **ChatGPT / Claude** — palette crème/beige, typographie Inter/Amiri
-- Streaming temps réel avec `ReadableStream` + curseur clignotant
-- Multi-conversations + thème clair/sombre + responsive mobile
-- Micro-animations (fade-in-up, pulse-dot, cursor-blink, gentle-float)
+### Frontend (Modern React)
+- **React 19** / **TypeScript**
+- **Vite 6** avec hot-reload & Proxy API
+- **Tailwind CSS 3** (Charte méticuleuse empruntant au nouveau design web de ChatGPT)
+- **NDJSON Streaming** persillé manuellement via JS `ReadableStream`
+- Support rendu riche Markdown
 
 ---
 
-## 📦 Installation & Démarrage
+## 📦 Installation & Démarrage Local
 
 ### Pré-requis
 - **Python 3.11+**
-- **Node.js 18+** (npm inclus)
-- **Git**
-- Une **clé API Google AI** (Gemini) → [Obtenir ici](https://aistudio.google.com/apikey)
+- **Node.js 18+**
+- Une **[Clé API Google Gemini](https://aistudio.google.com/apikey)**
 
----
-
-### Étape 1 — Cloner le projet
+### Étape 1 — Environnement & Backend
 
 ```powershell
+# 1. Cloner
 git clone <repo-url> iacoran
 cd iacoran
-```
 
----
-
-### Étape 2 — Environnement virtuel Python
-
-```powershell
-# Créer l'environnement virtuel
+# 2. Venv & Dépendances
 python -m venv venv
-
-# Activer l'environnement virtuel (Windows PowerShell)
-.\venv\Scripts\activate
-
-# Installer toutes les dépendances depuis le fichier gelé
+.\venv\Scripts\activate   # ou source venv/bin/activate (Linux/Mac)
 pip install -r requirements.txt
-```
 
-> **Note** : Si `requirements.txt` n'existe pas encore, installez manuellement :
-> ```powershell
-> pip install django djangorestframework faiss-cpu sentence-transformers google-generativeai python-dotenv django-cors-headers
-> pip freeze > requirements.txt
-> ```
+# 3. Environnement
+# (Créer un fichier .env contenant GEMINI_API_KEY et DJANGO_SECRET_KEY)
+# echo "GEMINI_API_KEY=YOUR_API_KEY" > .env
+# echo "DJANGO_SECRET_KEY=dev_secret" >> .env
 
----
-
-### Étape 3 — Configuration des variables d'environnement
-
-Créez un fichier `.env` à la racine du projet :
-
-```ini
-DJANGO_SECRET_KEY=votre_cle_secrete_django
-GEMINI_API_KEY=votre_cle_api_gemini
-DJANGO_DEBUG=True
-```
-
----
-
-### Étape 4 — Migrations de la base de données
-
-```powershell
-# Créer les tables dans la base de données SQLite
+# 4. Base de Données
 python manage.py makemigrations
 python manage.py migrate
 
-# (Optionnel) Créer un superutilisateur pour l'admin Django
-python manage.py createsuperuser
+# 5. Injection de la configuration Initiale
+python seed_plans.py
 ```
 
----
+### Étape 2 — Génération des Index (Une Fois)
 
-### Étape 5 — Indexation des versets du Coran
+⚠️ Prévoyez 30-45 min pour générer la connaissance de l'IA (en fonction du CPU).
 
 ```powershell
-# Générer les embeddings normalisés à partir de quran_complet.json
-# ⚠️ Cette étape peut prendre ~20 minutes selon votre machine
+# Indexer le Coran (~20 min)
 python index_quran.py
+
+# Indexer les Ahadith (Bukhari) (~20 min)
+# python fetch_hadith.py (Seulement si vous n'avez pas bukhari_complet.json)
+python index_hadith.py
 ```
 
-Cela génère :
-- `quran_indexed.json` — données + embeddings + texte normalisé
-- `quran_faiss.index` — index binaire FAISS (créé automatiquement au premier lancement du serveur)
+### Étape 3 — Lancement Serveurs
 
----
-
-### Étape 6 — Lancer le serveur backend
-
+**Terminal Backend :**
 ```powershell
 python manage.py runserver
 ```
 
-✅ Le backend est accessible sur **http://localhost:8000**
-- Admin Django : http://localhost:8000/admin/
-- API Search : http://localhost:8000/api/search/?q=patience
-- API Ask : http://localhost:8000/api/ask/ (POST)
-- API Stream : http://localhost:8000/api/ask/stream/ (POST, streaming)
-
----
-
-### Étape 7 — Lancer le frontend
-
+**Terminal Frontend :**
 ```powershell
-# Dans un nouveau terminal
 cd frontend
-
-# Installer les dépendances Node.js
-npm install
-
-# Lancer le serveur de développement Vite
-npm run dev
-```
-
-✅ Le frontend est accessible sur **http://localhost:5173**
-
----
-
-### 🚀 Résumé rapide (copier-coller)
-
-Pour démarrer le projet complet en une seule séquence :
-
-```powershell
-# Terminal 1 — Backend
-cd iacoran
-.\venv\Scripts\activate
-pip install -r requirements.txt
-python manage.py makemigrations
-python manage.py migrate
-python manage.py runserver
-
-# Terminal 2 — Frontend
-cd iacoran/frontend
 npm install
 npm run dev
 ```
 
----
-
-## 🔌 API Endpoints
-
-### 1. Recherche sémantique
-
-Retourne les versets les plus proches sémantiquement de la requête.
-
-- **URL** : `GET /api/search/`
-- **Paramètres** : `q` (requête), `limit` (optionnel, défaut: 5)
-
-```bash
-GET /api/search/?q=importance de la charité&limit=3
-```
-
-### 2. Assistant IA (non-streaming)
-
-Génère une réponse complète (attend la fin avant de répondre).
-
-- **URL** : `POST /api/ask/`
-- **Corps (JSON)** :
-
-```json
-{
-  "q": "Comment le Coran décrit-il la création de l'univers ?",
-  "limit": 5
-}
-```
-
-### 3. Assistant IA (streaming) ⚡
-
-Stream la réponse token par token via NDJSON (Newline-Delimited JSON).
-C'est l'endpoint utilisé par le frontend React.
-
-- **URL** : `POST /api/ask/stream/`
-- **Corps (JSON)** : identique à `/api/ask/`
-- **Protocole** : NDJSON — chaque ligne est un événement JSON :
-
-```jsonl
-{"type": "sources", "data": [{"reference": "...", "text_ar": "...", "text_fr": "..."}]}
-{"type": "token",   "data": "Le "}
-{"type": "token",   "data": "Coran "}
-{"type": "token",   "data": "dit..."}
-{"type": "done"}
-```
-
-| Événement | Description |
-|-----------|-------------|
-| `sources` | Versets coraniques utilisés comme contexte |
-| `token` | Fragment de texte de la réponse LLM |
-| `done` | Génération terminée |
-| `error` | Message d'erreur |
-```
+L'application est servie élégamment sur **[http://localhost:5173](http://localhost:5173)**.
 
 ---
 
-## 🛡️ Sécurité
+## 🔌 API Endpoints Principaux
 
-- Les clés API ne doivent **jamais** être commitées (utiliser `.env`)
-- Le LLM est bridé par un prompt système strict pour éviter les réponses hors contexte
-- Les entrées utilisateur sont normalisées et validées côté serveur
-- CORS configuré (à restreindre en production)
+| Méthode | Route | Description | Auth |
+|---|---|---|---|
+| POST | `/api/register/` | Création de compte utilisateur | Ouverte |
+| POST | `/api/login/` | Obtenir les tokens DRF | Ouverte |
+| GET | `/api/user/` | Obtenir statistiques du quota & profil | Requise |
+| POST | `/api/ask/stream/` | Poser une question (Streaming RAG) | Requise (Génère une 403 si limite) |
+| GET | `/api/search/` | Recherche RAG pure format JSON | Optionnelle |
+
+*Chaque endpoint streaming inclut dans ses payloads la restitution de métriques de limites API sous les attributs `reset_time` sur l'UI.*
 
 ---
 
-## 📊 Optimisations implémentées
+## 🛡️ Règle d'Architecture & Contribution
 
-| Technique | Impact | Statut |
-|-----------|--------|--------|
-| Normalisation FR (accents, casse) | ⭐⭐⭐⭐ | ✅ |
-| Normalisation AR (harakat, alif) | ⭐⭐⭐⭐ | ✅ |
-| Query Rewriting (Gemini) | ⭐⭐⭐⭐⭐ | ✅ |
-| Préfixe E5 (`query:` / `passage:`) | ⭐⭐⭐⭐⭐ | ✅ |
-| top_k étendu (10 → LLM filtre) | ⭐⭐⭐ | ✅ |
-| Streaming temps réel (NDJSON) | ⭐⭐⭐⭐⭐ | ✅ |
-| Frontend React + Tailwind | ⭐⭐⭐⭐⭐ | ✅ |
-| Multi-conversations + thèmes | ⭐⭐⭐⭐ | ✅ |
-| Rendu Markdown (react-markdown) | ⭐⭐⭐ | ✅ |
-| Hybrid Search (BM25 + Vector) | ⭐⭐⭐⭐⭐ | 🔜 |
-| Re-ranking (Cross-Encoder) | ⭐⭐⭐⭐ | 🔜 |
+1. **Anti-Hallucination :** Le système de prompt injecte strictement un JSON de passages en amont de toute question pour contraindre le LLM au RAG.
+2. **Frontend UI :** Les directives CSS sont logées dans `index.css`. TailWind CSS est strict (pas de padding brut s'il existe une classe utilitaire). L'UI doit rester totalement minimale ("Page blanche").
+3. **DRF Auth :** Les appels API frontend s'appuient sur l'attachement d'un Headers de `Authorization: Token XXXXXX` à `fetch()`. Le rafraîchissement est automatique s'il manque.
 
 ---
 

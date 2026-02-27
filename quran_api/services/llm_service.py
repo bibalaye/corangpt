@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 # Prompt for query rewriting — short, focused
 _REWRITE_SYSTEM_PROMPT = (
-    "Tu es un expert en recherche coranique. "
+    "Tu es un expert en recherche islamique. "
     "Ton rôle est de transformer une question utilisateur en mots-clés de recherche optimisés.\n\n"
     "Règles :\n"
     "- Extrais uniquement les concepts religieux et thématiques essentiels\n"
@@ -76,21 +76,22 @@ class LLMService:
         # Format context for the prompt
         context_str = ""
         for i, ctx in enumerate(contexts):
-            context_str += f"- {ctx['reference']} :\n  Texte Arabe : {ctx['text_ar']}\n  Traduction Française : {ctx['text_fr']}\n\n"
+            source_type = ctx.get('source_type', 'Coran')
+            context_str += f"- [{source_type}] {ctx['reference']} :\n  Texte Arabe : {ctx.get('text_ar', '')}\n  Traduction Française : {ctx.get('text_fr', '')}\n\n"
 
         system_instruction = (
-            "Tu es un assistant coranique bienveillant et érudit. "
-            "Ta mission est d'aider les utilisateurs à comprendre le Coran "
-            "en t'appuyant sur les versets qui te sont fournis en contexte.\n\n"
+            "Tu es un assistant islamique bienveillant et érudit. "
+            "Ta mission est d'aider les utilisateurs à comprendre l'Islam "
+            "en t'appuyant sur le Coran et les Hadiths qui te sont fournis en contexte.\n\n"
             "Comment répondre :\n"
             "- Utilise un langage naturel, fluide et chaleureux, comme un savant qui explique avec douceur.\n"
-            "- Base tes réponses UNIQUEMENT sur les versets fournis dans le contexte ci-dessous.\n"
-            "- Cite toujours la sourate et le numéro du verset entre parenthèses, par exemple (Sourate Al-Baqara, 2:153).\n"
-            "- Explique le sens des versets de manière accessible, en les reliant à la question posée.\n"
+            "- Base tes réponses UNIQUEMENT sur les sources fournies dans le contexte ci-dessous.\n"
+            "- Précise toujours la source de tes citations (ex: Sourate Al-Baqara, 2:153 pour le Coran ou la référence du Hadith fournie).\n"
+            "- Explique le sens des textes de manière accessible, en les reliant à la question posée.\n"
             "- Tu peux reformuler, contextualiser et enrichir ta réponse pour la rendre pédagogique.\n"
-            "- Si les versets fournis répondent clairement à la question, n'hésite pas à le dire avec assurance.\n"
-            "- Si aucun verset du contexte ne traite du sujet demandé, réponds simplement :\n"
-            "  \"Je ne trouve pas de réponse claire dans les versets qui me sont fournis.\"\n\n"
+            "- Si les textes fournis répondent clairement à la question, n'hésite pas à le dire avec assurance.\n"
+            "- Si aucun texte du contexte ne traite du sujet demandé, réponds simplement :\n"
+            "  \"Je ne trouve pas de réponse claire dans les sources qui me sont fournies.\"\n\n"
             "Garde toujours un ton respectueux, bienveillant et accessible."
         )
 
@@ -122,25 +123,26 @@ class LLMService:
         # Format context
         context_str = ""
         for ctx in contexts:
+            source_type = ctx.get('source_type', 'Coran')
             context_str += (
-                f"- {ctx['reference']} :\n"
-                f"  Texte Arabe : {ctx['text_ar']}\n"
-                f"  Traduction Française : {ctx['text_fr']}\n\n"
+                f"- [{source_type}] {ctx['reference']} :\n"
+                f"  Texte Arabe : {ctx.get('text_ar', '')}\n"
+                f"  Traduction Française : {ctx.get('text_fr', '')}\n\n"
             )
 
         system_instruction = (
-            "Tu es un assistant coranique bienveillant et érudit. "
-            "Ta mission est d'aider les utilisateurs à comprendre le Coran "
-            "en t'appuyant sur les versets qui te sont fournis en contexte.\n\n"
+            "Tu es un assistant islamique bienveillant et érudit. "
+            "Ta mission est d'aider les utilisateurs à comprendre l'Islam "
+            "en t'appuyant sur le Coran et les Hadiths qui te sont fournis en contexte.\n\n"
             "Comment répondre :\n"
             "- Utilise un langage naturel, fluide et chaleureux, comme un savant qui explique avec douceur.\n"
-            "- Base tes réponses UNIQUEMENT sur les versets fournis dans le contexte ci-dessous.\n"
-            "- Cite toujours la sourate et le numéro du verset entre parenthèses, par exemple (Sourate Al-Baqara, 2:153).\n"
-            "- Explique le sens des versets de manière accessible, en les reliant à la question posée.\n"
+            "- Base tes réponses UNIQUEMENT sur les sources fournies dans le contexte ci-dessous.\n"
+            "- Précise toujours la source de tes citations (ex: Sourate Al-Baqara, 2:153 pour le Coran ou la référence du Hadith fournie).\n"
+            "- Explique le sens des textes de manière accessible, en les reliant à la question posée.\n"
             "- Tu peux reformuler, contextualiser et enrichir ta réponse pour la rendre pédagogique.\n"
-            "- Si les versets fournis répondent clairement à la question, n'hésite pas à le dire avec assurance.\n"
-            "- Si aucun verset du contexte ne traite du sujet demandé, réponds simplement :\n"
-            "  \"Je ne trouve pas de réponse claire dans les versets qui me sont fournis.\"\n\n"
+            "- Si les textes fournis répondent clairement à la question, n'hésite pas à le dire avec assurance.\n"
+            "- Si aucun texte du contexte ne traite du sujet demandé, réponds simplement :\n"
+            "  \"Je ne trouve pas de réponse claire dans les sources qui me sont fournies.\"\n\n"
             "Garde toujours un ton respectueux, bienveillant et accessible."
         )
 

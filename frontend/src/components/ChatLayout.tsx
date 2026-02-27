@@ -20,7 +20,7 @@ export function ChatLayout({ chat, theme, onToggleTheme }: ChatLayoutProps) {
     const hasMessages = chat.currentMessages.length > 0
 
     return (
-        <div className="flex h-screen w-screen bg-cream-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 transition-colors duration-300">
+        <div className="flex h-screen w-screen bg-white dark:bg-[#202123] text-stone-900 dark:text-stone-100 transition-colors duration-300 overflow-hidden font-sans">
             {/* Mobile overlay */}
             {sidebarOpen && (
                 <div
@@ -43,12 +43,12 @@ export function ChatLayout({ chat, theme, onToggleTheme }: ChatLayoutProps) {
 
             {/* Main chat area */}
             <main className="flex-1 flex flex-col min-w-0 relative">
-                {/* Header */}
-                <header className="flex items-center px-4 md:px-6 py-3 border-b border-cream-300/60 dark:border-stone-800 bg-cream-50/80 dark:bg-stone-950/80 backdrop-blur-xl z-10">
-                    {/* Hamburger — mobile only */}
+                {/* Header - Mobile Only */}
+                <header className="md:hidden flex items-center px-4 py-3 border-b border-stone-200 dark:border-stone-800 bg-white dark:bg-[#202123] z-10 sticky top-0">
+                    {/* Hamburger */}
                     <button
                         onClick={() => setSidebarOpen(true)}
-                        className="md:hidden mr-3 p-1.5 rounded-lg hover:bg-cream-200 dark:hover:bg-stone-800 transition-colors"
+                        className="mr-3 p-1.5 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300 transition-colors"
                         aria-label="Menu"
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -56,14 +56,11 @@ export function ChatLayout({ chat, theme, onToggleTheme }: ChatLayoutProps) {
                         </svg>
                     </button>
 
-                    <div className="flex items-center gap-2.5">
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100/80 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
-                            Gemini 2.0 Flash
-                        </span>
-                        <span className="text-sm text-stone-400 dark:text-stone-500 font-medium">
-                            Expert Coranique
-                        </span>
+                    <div className="flex-1 text-center font-medium text-[15px] text-stone-800 dark:text-stone-200">
+                        IA Coran
                     </div>
+                    {/* Empty div for flex balance */}
+                    <div className="w-8"></div>
                 </header>
 
                 {/* Messages */}
@@ -87,6 +84,10 @@ export function ChatLayout({ chat, theme, onToggleTheme }: ChatLayoutProps) {
                     onSend={chat.sendMessage}
                     onStop={chat.stopGeneration}
                     isStreaming={chat.isStreaming}
+                    isLimitReached={chat.isLimitReached}
+                    resetTime={chat.nextResetTime}
+                    sourceFilter={chat.sourceFilter}
+                    onSourceFilterChange={chat.setSourceFilter}
                 />
             </main>
         </div>

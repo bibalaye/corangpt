@@ -12,15 +12,18 @@ interface QuranVerseProps {
  * Includes audio playback for the verse.
  */
 export function QuranVerse({ verse, autoPlayTrigger }: QuranVerseProps) {
+    const isHadith = verse.source_type === 'Hadith'
+    const isQuran = !isHadith
+
     const [isPlaying, setIsPlaying] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const audioRef = useRef<HTMLAudioElement | null>(null)
 
-    // Extract Surah and Ayah numbers for the audio URL
+    // Extract Surah and Ayah numbers for the audio URL (Quran only)
     let surah = verse.metadata?.sourate;
     let ayah = verse.metadata?.ayah;
 
-    if (!surah || !ayah) {
+    if (isQuran && !surah && !ayah) {
         // Fallback: extract from reference string like "Sourate 2:185"
         const match = verse.reference.match(/(\d+)[:\s-]*(\d+)/);
         if (match) {
@@ -29,8 +32,8 @@ export function QuranVerse({ verse, autoPlayTrigger }: QuranVerseProps) {
         }
     }
 
-    // Generate EveryAyah API URL for Mishary Alafasy (128kbps)
-    const audioUrl = surah && ayah
+    // Generate EveryAyah API URL for Mishary Alafasy (128kbps) - Quran only
+    const audioUrl = isQuran && surah && ayah
         ? `https://everyayah.com/data/Alafasy_128kbps/${surah.toString().padStart(3, '0')}${ayah.toString().padStart(3, '0')}.mp3`
         : null;
 
@@ -101,7 +104,23 @@ export function QuranVerse({ verse, autoPlayTrigger }: QuranVerseProps) {
     };
 
     return (
-        <div className="quran-verse-block animate-fade-in-up">
+        <div className={`quran-verse-block animate-fade-in-up border-l-4 pl-4 py-2 ${isQuran ? 'border-green-500' : 'border-blue-500'} dark:${isQuran ? 'border-green-600' : 'border-blue-600'} bg-white/50 dark:bg-stone-900/50 rounded-r-lg shadow-sm mb-3`}>
+            {/* Header: source icon + reference */}
+            <div className="flex items-center gap-2 mb-3">
+                {isQuran ? (
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400">
+                        📖
+                    </span>
+                ) : (
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400">
+                        📜
+                    </span>
+                )}
+                <span className={`inline-block text-xs font-bold px-2.5 py-1 rounded-sm ${isQuran ? 'text-green-700 dark:text-green-400' : 'text-blue-700 dark:text-blue-400'}`}>
+                    {verse.reference}
+                </span>
+            </div>
+
             {/* Arabic text */}
             <p className="font-arabic text-xl leading-loose text-stone-800 dark:text-stone-200 text-right mb-3" dir="rtl">
                 {verse.text_ar}
@@ -112,13 +131,8 @@ export function QuranVerse({ verse, autoPlayTrigger }: QuranVerseProps) {
                 {verse.text_fr}
             </p>
 
-            {/* Bottom Row: Reference badge + Audio Button */}
-            <div className="flex items-center justify-between mt-1">
-                {/* Reference badge */}
-                <span className="inline-block text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100/80 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
-                    {verse.reference}
-                </span>
-
+            {/* Bottom Row: Audio Button (Quran only) */}
+            <div className="flex items-center justify-end mt-1">
                 {/* Audio Button */}
                 {audioUrl && (
                     <button
@@ -126,7 +140,7 @@ export function QuranVerse({ verse, autoPlayTrigger }: QuranVerseProps) {
                         disabled={isLoading}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer
                             ${isPlaying
-                                ? 'bg-amber-500 text-white shadow-md'
+                                ? 'bg-green-500 text-white shadow-md'
                                 : 'bg-stone-100 dark:bg-stone-800/80 text-stone-600 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700 border border-stone-200 dark:border-stone-700'
                             }
                             ${isLoading ? 'opacity-80 cursor-wait' : ''}

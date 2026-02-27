@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     
     # Third party apps
     'rest_framework',
+    'rest_framework.authtoken',
     'corsheaders',
 
     # Local apps
@@ -94,8 +95,21 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS
 CORS_ALLOW_ALL_ORIGINS = True
 
+# REST Framework settings
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ]
+}
+
 # Quran Config
 QURAN_INDEX_PATH = BASE_DIR / "quran_indexed.json"
 FAISS_INDEX_PATH = BASE_DIR / "quran_faiss.index"
+HADITH_INDEX_PATH = BASE_DIR / "hadith_indexed.json"
+HADITH_FAISS_INDEX_PATH = BASE_DIR / "hadith_faiss.index"
 MODEL_NAME = 'intfloat/multilingual-e5-base'
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')

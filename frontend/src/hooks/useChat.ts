@@ -1,6 +1,7 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import type { Conversation, Message, QuranVerse } from '../types/chat'
-import { streamQuestion } from '../lib/api'
+import { streamQuestion, fetchHistory } from '../lib/api'
+import { useAuth } from './useAuth'
 
 /** Generate a unique ID */
 const uid = () => crypto.randomUUID()
@@ -13,24 +14,161 @@ const createConversation = (): Conversation => ({
     createdAt: new Date(),
 })
 
-/**
- * Core chat state management hook.
- *
- * Handles:
- * - Multiple conversations with history
- * - Real-time streaming from the backend
- * - Abort/stop generation
- * - Error handling
- */
 export function useChat() {
-    const [conversations, setConversations] = useState<Conversation[]>([createConversation()])
-    const [currentId, setCurrentId] = useState<string>(conversations[0].id)
-    const [isStreaming, setIsStreaming] = useState(false)
-    const abortRef = useRef<AbortController | null>(null)
+    const { token } = useAuth();
+
+
+    const [conversations, setConversations] = useState<Conversation[]>(() => {
+        const fresh = createConversation();
+        const savedId = sessionStorage.getItem('currentChatId');
+        if (savedId && savedId.includes('-')) {
+            fresh.id = savedId;
+        }
+        return [fresh];
+    });
+
+    const [currentId, setCurrentId] = useState<string>(
+        sessionStorage.getItem('currentChatId') || conversations[0].id
+    );
+
+    const isInitialMount = useRef(true);
+    const [isStreaming, setIsStreaming] = useState(false);
+    const [sourceFilter, setSourceFilter] = useState<'both' | 'quran' | 'hadith'>('both');
+    const abortRef = useRef<AbortController | null>(null);
+
+    useEffect(() => {
+        if (token) {
+            fetchHistory().then((historyItems: any[]) => {
+                const loadedConvos = historyItems && historyItems.length > 0 ? historyItems.map(item => ({
+                    id: item.id.toString(),
+                    title: item.query.length > 40 ? item.query.slice(0, 40) + '…' : item.query,
+                    createdAt: new Date(item.created_at),
+                    messages: [
+                        { id: uid(), role: 'user', content: item.query, createdAt: new Date(item.created_at) } as Message,
+                        { id: uid(), role: 'assistant', content: item.response, sources: (item.sources || []), createdAt: new Date(item.created_at) } as Message
+                    ]
+                })) : [];
+
+                setConversations(prev => {
+                    const savedId = sessionStorage.getItem('currentChatId');
+                    // Find an empty chat if we had one locally
+                    const emptyLocals = prev.filter(c => c.messages.length === 0);
+
+                    // See if the saved session ID was an empty chat ID
+                    const emptyToKeep = emptyLocals.find(c => c.id === savedId)
+                        || (emptyLocals.length > 0 ? emptyLocals[0] : createConversation());
+
+                    if (savedId && savedId === emptyToKeep.id) {
+                        emptyToKeep.id = savedId;
+                    }
+
+                    const newConvos = [emptyToKeep, ...loadedConvos];
+
+                    if (isInitialMount.current) {
+                        if (savedId && newConvos.some(c => c.id === savedId)) {
+                            setCurrentId(savedId);
+                        } else {
+                            setCurrentId(emptyToKeep.id);
+                        }
+                    } else {
+                        // We came here dynamically (login). We put the user on the empty chat.
+                        setCurrentId(emptyToKeep.id);
+                    }
+
+                    return newConvos;
+                });
+
+                isInitialMount.current = false;
+            }).catch(e => {
+                console.error(e);
+                isInitialMount.current = false;
+            });
+        } else {
+            setConversations(prev => {
+                const emptyLocals = prev.filter(c => c.messages.length === 0);
+                const savedId = sessionStorage.getItem('currentChatId');
+
+                const emptyToKeep = emptyLocals.find(c => c.id === savedId)
+                    || (emptyLocals.length > 0 ? emptyLocals[0] : createConversation());
+
+                if (savedId && savedId === emptyToKeep.id) {
+                    emptyToKeep.id = savedId;
+                    setCurrentId(savedId);
+                } else if (!isInitialMount.current) {
+                    setCurrentId(emptyToKeep.id);
+                } else {
+                    setCurrentId(emptyToKeep.id);
+                }
+
+                return [emptyToKeep];
+            });
+            isInitialMount.current = false;
+        }
+    }, [token]);
+
+    // Update sessionStorage continuously
+    useEffect(() => {
+        if (currentId) {
+            sessionStorage.setItem('currentChatId', currentId);
+        }
+    }, [currentId]);
 
     // ── Derived state ──
-    const currentConversation = conversations.find(c => c.id === currentId) ?? conversations[0]
-    const currentMessages = currentConversation.messages
+    // Fallback safe au cas où un bug interviendrait
+    const currentConversation = conversations.find(c => c.id === currentId) ?? conversations[0];
+    const currentMessages = currentConversation.messages;
+
+    const [isLimitReached, setIsLimitReached] = useState(false);
+    const [nextResetTime, setNextResetTime] = useState<string | null>(null);
+
+    useEffect(() => {
+        const checkLimit = () => {
+            const userStr = localStorage.getItem('user');
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    // Check if last_request_date is essentially today
+                    // Si date change on the server, requests_today gets reset. 
+                    // Si on a un limit > 0 et que notre compte en memoire est saturé : 
+                    if (user.profile && user.profile.daily_request_limit > 0 && user.profile.requests_today >= user.profile.daily_request_limit) {
+
+                        // Local fallback calculation for reset (midnight tonight)
+                        let timeStr = "";
+                        try {
+                            const now = new Date();
+                            const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+                            tomorrow.setHours(0, 0, 0, 0); // reset at midnight local time
+                            const msDiff = tomorrow.getTime() - now.getTime();
+                            const hoursLeft = Math.floor(msDiff / (1000 * 60 * 60));
+                            const minsLeft = Math.floor((msDiff % (1000 * 60 * 60)) / (1000 * 60));
+                            timeStr = `${hoursLeft}h ${minsLeft}m`;
+                        } catch (e) { }
+
+                        setIsLimitReached(true);
+                        setNextResetTime(timeStr);
+                        return;
+                    }
+                } catch (e) { }
+            }
+            setIsLimitReached(false);
+            setNextResetTime(null);
+        };
+
+        checkLimit();
+        // Optionnel : Re-vérifier quand les événements surviennent
+        window.addEventListener('storage', checkLimit);
+
+        // Timer effect if limit reached
+        let interval: ReturnType<typeof setInterval>;
+        if (isLimitReached) {
+            interval = setInterval(checkLimit, 60000); // refresh every minute
+        }
+
+        return () => {
+            window.removeEventListener('storage', checkLimit);
+            if (interval) clearInterval(interval);
+        }
+    }, [currentMessages.length, isLimitReached]); // Re-vérifier après chaque message (la valeur locale de requests_today y est incrementée)
 
     // ── Helpers to update messages in the current conversation ──
     const updateMessages = useCallback(
@@ -57,9 +195,16 @@ export function useChat() {
 
     /** Start a new conversation */
     const newChat = useCallback(() => {
-        const conv = createConversation()
-        setConversations(prev => [conv, ...prev])
-        setCurrentId(conv.id)
+        setConversations(prev => {
+            const emptyChat = prev.find(c => c.messages.length === 0);
+            if (emptyChat) {
+                setCurrentId(emptyChat.id);
+                return prev;
+            }
+            const conv = createConversation();
+            setCurrentId(conv.id);
+            return [conv, ...prev];
+        });
     }, [])
 
     /** Switch to an existing conversation */
@@ -102,6 +247,35 @@ export function useChat() {
         async (content: string) => {
             if (isStreaming || !content.trim()) return
 
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.dispatchEvent(new CustomEvent('open-auth-modal'));
+                return;
+            }
+
+            const userStr = localStorage.getItem('user');
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    if (user.profile && user.profile.daily_request_limit > 0 && user.profile.requests_today >= user.profile.daily_request_limit) {
+                        // Let's attempt to calculate reset time
+                        let timeStr = "";
+                        try {
+                            const now = new Date();
+                            const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+                            tomorrow.setHours(0, 0, 0, 0);
+                            const msDiff = tomorrow.getTime() - now.getTime();
+                            const hoursLeft = Math.floor(msDiff / (1000 * 60 * 60));
+                            const minsLeft = Math.floor((msDiff % (1000 * 60 * 60)) / (1000 * 60));
+                            timeStr = `${hoursLeft}h ${minsLeft}m`;
+                        } catch (e) { }
+
+                        document.dispatchEvent(new CustomEvent('open-limit-modal', { detail: { resetTime: timeStr } }));
+                        return;
+                    }
+                } catch (e) { }
+            }
+
             const userMsg: Message = {
                 id: uid(),
                 role: 'user',
@@ -137,6 +311,7 @@ export function useChat() {
             try {
                 await streamQuestion(
                     content.trim(),
+                    sourceFilter,
                     {
                         onSources: (sources: QuranVerse[]) => {
                             updateMessages(msgs =>
@@ -162,44 +337,72 @@ export function useChat() {
                                         : m
                                 )
                             )
+
+                            // On success, we also update the user requests_today state in local storage to keep sync
+                            const userStr = localStorage.getItem('user');
+                            if (userStr) {
+                                try {
+                                    const user = JSON.parse(userStr);
+                                    if (user.profile) {
+                                        user.profile.requests_today = (user.profile.requests_today || 0) + 1;
+                                        localStorage.setItem('user', JSON.stringify(user));
+                                    }
+                                } catch (e) { }
+                            }
                         },
-                        onError: (error: string) => {
-                            updateMessages(msgs =>
-                                msgs.map(m =>
-                                    m.id === assistantMsg.id
-                                        ? {
-                                            ...m,
-                                            content: `Erreur: ${error}`,
-                                            isStreaming: false,
-                                        }
-                                        : m
+                        onError: (error: string, errorCode?: string, serverResetTime?: string) => {
+                            if (errorCode === 'limit_reached' || error.includes('Limite de requêtes') || error.includes('403')) {
+                                document.dispatchEvent(new CustomEvent('open-limit-modal', { detail: { resetTime: serverResetTime || nextResetTime || "demain" } }));
+                                // Remove the optimistic messages
+                                updateMessages(msgs => msgs.filter(m => m.id !== assistantMsg.id && m.id !== userMsg.id));
+                                setIsLimitReached(true)
+                                if (serverResetTime) setNextResetTime(serverResetTime)
+                            } else {
+                                updateMessages(msgs =>
+                                    msgs.map(m =>
+                                        m.id === assistantMsg.id
+                                            ? {
+                                                ...m,
+                                                content: `Erreur: ${error}`,
+                                                isStreaming: false,
+                                            }
+                                            : m
+                                    )
                                 )
-                            )
+                            }
                         },
                     },
                     controller.signal
                 )
             } catch (err: any) {
                 if (err.name !== 'AbortError') {
-                    updateMessages(msgs =>
-                        msgs.map(m =>
-                            m.id === assistantMsg.id
-                                ? {
-                                    ...m,
-                                    content:
-                                        'Désolé, une erreur est survenue. Vérifiez que le serveur Django est lancé.',
-                                    isStreaming: false,
-                                }
-                                : m
+                    if (err.resetTime) {
+                        setNextResetTime(err.resetTime);
+                    }
+                    if (err.message && (err.message.includes('Limite de requêtes') || err.message.includes('403'))) {
+                        document.dispatchEvent(new CustomEvent('open-limit-modal', { detail: { resetTime: err.resetTime || nextResetTime || "demain" } }));
+                        updateMessages(msgs => msgs.filter(m => m.id !== assistantMsg.id && m.id !== userMsg.id));
+                        setIsLimitReached(true)
+                    } else {
+                        updateMessages(msgs =>
+                            msgs.map(m =>
+                                m.id === assistantMsg.id
+                                    ? {
+                                        ...m,
+                                        content: err.message || 'Désolé, une erreur est survenue.',
+                                        isStreaming: false,
+                                    }
+                                    : m
+                            )
                         )
-                    )
+                    }
                 }
             } finally {
                 setIsStreaming(false)
                 abortRef.current = null
             }
         },
-        [isStreaming, currentMessages.length, updateMessages, updateConversationTitle]
+        [isStreaming, currentMessages.length, sourceFilter, updateMessages, updateConversationTitle]
     )
 
     return {
@@ -208,6 +411,10 @@ export function useChat() {
         currentMessages,
         currentId,
         isStreaming,
+        isLimitReached,
+        nextResetTime,
+        sourceFilter,
+        setSourceFilter,
         newChat,
         sendMessage,
         selectConversation,

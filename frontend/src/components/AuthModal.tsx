@@ -114,7 +114,7 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
                                 <input
                                     type="text"
                                     required
-                                    placeholder="Ex: abibou123"
+                                    placeholder="Ex: votre nom d'utilisateur"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
                                     className="w-full px-4 py-3 bg-white dark:bg-stone-950 border border-cream-300 dark:border-stone-700 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all outline-none text-stone-900 dark:text-stone-100 placeholder-stone-400"

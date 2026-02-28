@@ -1,0 +1,56 @@
+# ==============================================================
+# render.yaml – Blueprint for Render deployment
+# ==============================================================
+# Render will read this file to auto-configure the service.
+# Docs: https://docs.render.com/blueprint-spec
+# ==============================================================
+
+services:
+  - type: web
+    name: iacoran-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter         # Render paid plan (free plan has limited RAM)
+    region: frankfurt      # EU region closest to West Africa
+    healthCheckPath: /api/
+    envVars:
+      # ---- Django ----
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: DJANGO_ALLOWED_HOSTS
+        value: ".onrender.com"
+
+      # ---- Superuser ----
+      - key: DJANGO_SUPERUSER_USERNAME
+        value: admin
+      - key: DJANGO_SUPERUSER_EMAIL
+        value: admin@iacoran.com
+      - key: DJANGO_SUPERUSER_PASSWORD
+        sync: false        # Prompted at deploy time
+
+      # ---- Gemini AI ----
+      - key: GEMINI_API_KEY
+        sync: false        # Prompted at deploy time
+
+      # ---- Database (Render PostgreSQL) ----
+      - key: DATABASE_URL
+        fromDatabase:
+          name: iacoran-db
+          property: connectionString
+
+      # ---- Gunicorn ----
+      - key: GUNICORN_WORKERS
+        value: "2"
+      - key: GUNICORN_THREADS
+        value: "4"
+      - key: GUNICORN_TIMEOUT
+        value: "120"
+
+databases:
+  - name: iacoran-db
+    plan: starter
+    databaseName: iacoran
+    user: iacoran_user
+    region: frankfurt

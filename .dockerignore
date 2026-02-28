@@ -1,0 +1,57 @@
+# ==============================================================
+# .dockerignore – iaCoran
+# ==============================================================
+
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+.gemini/
+
+# Database (will be recreated in container)
+db.sqlite3
+db.sqlite3-journal
+
+# Environment files (passed via Render env vars)
+.env
+.env.*
+
+# Frontend & Mobile (not deployed in this container)
+frontend/
+mobile/
+node_modules/
+
+# Large uncompressed index files (we use the .zip versions)
+quran_indexed.json
+hadith_indexed.json
+quran_faiss.index
+hadith_faiss.index
+
+# ML model cache
+*.h5
+*.pkl
+*.pt
+*.bin
+
+# Misc
+*.bak
+*.tmp
+*.log
+.cache/
+Thumbs.db
+.DS_Store
+README.md
+docs/

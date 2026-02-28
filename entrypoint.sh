@@ -47,26 +47,6 @@ echo "🌱 [4/5] Seed des plans d'abonnement..."
 python seed_plans.py
 echo "✅ Plans seedés."
 
-# ---- 5. Build FAISS indexes (Quran + Hadith) ----
-echo ""
-echo "🔍 [5/5] Vérification et construction des index FAISS..."
-
-if [ ! -f "/app/quran_faiss.index" ]; then
-    echo "   ⏳ Construction de l'index Quran FAISS..."
-    python index_quran.py
-    echo "   ✅ Index Quran FAISS créé."
-else
-    echo "   ✅ Index Quran FAISS déjà présent."
-fi
-
-if [ ! -f "/app/hadith_faiss.index" ]; then
-    echo "   ⏳ Construction de l'index Hadith FAISS..."
-    python index_hadith.py
-    echo "   ✅ Index Hadith FAISS créé."
-else
-    echo "   ✅ Index Hadith FAISS déjà présent."
-fi
-
 # ---- 6. Start Gunicorn ----
 echo ""
 echo "============================================="

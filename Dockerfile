@@ -29,9 +29,9 @@ RUN unzip -o quran_indexed.zip && unzip -o hadith_indexed.zip
 # ---------- Stage 2 : Runtime ----------
 FROM python:3.13-slim
 
-# System dependencies needed at runtime
+# System dependencies needed at runtime + dos2unix to fix Windows CRLF
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libopenblas0 libgomp1 \
+    libopenblas0 libgomp1 dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
@@ -58,9 +58,9 @@ COPY seed_plans.py /app/
 COPY index_quran.py /app/
 COPY index_hadith.py /app/
 
-# Copy entrypoint script
+# Copy entrypoint script and fix Windows CRLF → Unix LF
 COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+RUN dos2unix /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 # Create static files directory
 RUN mkdir -p /app/staticfiles
@@ -71,12 +71,8 @@ RUN chown -R appuser:appuser /app
 # Switch to non-root user
 USER appuser
 
-# Expose port (Render uses $PORT, defaults to 8000)
+# Expose port (Render assigns $PORT dynamically)
 EXPOSE 8000
 
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/')" || exit 1
-
-# Entrypoint performs migrations, seeding, indexing, then starts Gunicorn
+# Entrypoint performs migrations, seeding, then starts Gunicorn
 ENTRYPOINT ["/app/entrypoint.sh"]

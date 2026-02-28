@@ -31,15 +31,15 @@ echo "✅ Fichiers statiques collectés."
 # ---- 3. Superuser creation ----
 echo ""
 echo "👤 [3/5] Création du superuser..."
-if [ -n "$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$DJANGO_SUPERUSER_EMAIL" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ]; then
-    python manage.py createsuperuser --noinput \
-        --username "$DJANGO_SUPERUSER_USERNAME" \
-        --email "$DJANGO_SUPERUSER_EMAIL" \
-        2>/dev/null || echo "ℹ️  Superuser existe déjà ou erreur ignorée."
-    echo "✅ Superuser configuré."
-else
-    echo "⚠️  Variables DJANGO_SUPERUSER_* non définies – superuser ignoré."
-fi
+export DJANGO_SUPERUSER_USERNAME="${DJANGO_SUPERUSER_USERNAME:-admin}"
+export DJANGO_SUPERUSER_EMAIL="${DJANGO_SUPERUSER_EMAIL:-admin@iacoran.com}"
+export DJANGO_SUPERUSER_PASSWORD="${DJANGO_SUPERUSER_PASSWORD:-admin1234}"
+
+python manage.py createsuperuser --noinput \
+    --username "$DJANGO_SUPERUSER_USERNAME" \
+    --email "$DJANGO_SUPERUSER_EMAIL" \
+    2>/dev/null || echo "ℹ️  Superuser existe déjà."
+echo "✅ Superuser configuré ($DJANGO_SUPERUSER_USERNAME / $DJANGO_SUPERUSER_EMAIL)"
 
 # ---- 4. Seed plans ----
 echo ""

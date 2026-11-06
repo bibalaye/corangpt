@@ -82,9 +82,10 @@ TEMPLATES = [
 WSGI_APPLICATION = "core.wsgi.application"
 
 # PostgreSQL via DATABASE_URL in production (Render), SQLite in development
+# An empty DATABASE_URL (misconfigured env) falls back to SQLite instead of crashing
 DATABASES = {
-    "default": dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+    "default": dj_database_url.parse(
+        env("DATABASE_URL") or f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
         conn_max_age=600,
         conn_health_checks=True,
     )

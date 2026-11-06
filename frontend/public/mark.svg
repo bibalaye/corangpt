@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" role="img" aria-label="IA Coran">
+  <!-- Compact mark derived from logo.svg (same background, book, AI nodes and crescent; no lettering). -->
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2E8B57"/>
+      <stop offset="100%" stop-color="#1A531A"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F1C40F"/>
+      <stop offset="100%" stop-color="#BF9B30"/>
+    </linearGradient>
+  </defs>
+  <rect width="500" height="500" rx="112" fill="url(#bg)"/>
+  <g transform="translate(250 252) scale(1.55) translate(-250 -185)">
+    <path fill="url(#gold)" d="M250,280 c-30,-20 -70,-20 -100,0 v-90 c30,-20 70,-20 100,0 c30,-20 70,-20 100,0 v90 c-30,-20 -70,-20 -100,0 z"/>
+    <path fill="#FFFFFF" d="M250,270 c-25,-15 -60,-15 -90,0 v-75 c30,-15 65,-15 90,0 c25,-15 60,-15 90,0 v75 c-30,-15 -65,-15 -90,0 z"/>
+    <g stroke="url(#gold)" stroke-width="5" fill="none">
+      <path d="M250,150 L210,180 M250,150 L290,180 M210,180 L250,230 M290,180 L250,230 M250,150 v-30"/>
+    </g>
+    <g fill="url(#gold)">
+      <circle cx="250" cy="150" r="12"/>
+      <circle cx="210" cy="180" r="8"/>
+      <circle cx="290" cy="180" r="8"/>
+      <circle cx="250" cy="230" r="10"/>
+    </g>
+    <path fill="url(#gold)" d="M250,90 c-15,0 -28,8 -35,20 c5,-5 12,-8 20,-8 c18,0 32,14 32,32 c0,8 -3,15 -8,20 c12,-7 20,-20 20,-35 c0,-22 -18,-40 -40,-40 z"/>
+  </g>
+</svg>

@@ -1,61 +1,59 @@
 /** @type {import('tailwindcss').Config} */
+const token = (name) => `rgb(var(--${name}) / <alpha-value>)`
+
 export default {
     content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
     darkMode: 'class',
+    // Hover styles only on devices that really hover (no sticky hover after a tap on iPhone)
+    future: { hoverOnlyWhenSupported: true },
     theme: {
         extend: {
-            fontFamily: {
-                sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-                arabic: ['Amiri', 'serif'],
-            },
             colors: {
-                cream: {
-                    50: '#faf7f2',
-                    100: '#f5f0e8',
-                    200: '#ebe5d9',
-                    300: '#e0d8cc',
-                    400: '#c9bfb0',
-                    500: '#b3a89a',
+                ground: token('ground'),
+                surface: token('surface'),
+                sunk: token('sunk'),
+                line: token('line'),
+                ink: { DEFAULT: token('ink'), 2: token('ink-2'), 3: token('ink-3') },
+                shell: { DEFAULT: token('shell'), deep: token('shell-deep') },
+                'on-shell': { DEFAULT: token('on-shell'), 2: token('on-shell-2') },
+                quran: { DEFAULT: token('quran'), on: token('on-quran') },
+                hadith: token('hadith'),
+                ronier: token('ronier'),
+                clay: token('clay'),
+                danger: token('danger'),
+            },
+            fontFamily: {
+                sans: ['Salawat', '-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"Segoe UI"', 'system-ui', 'Roboto', 'sans-serif'],
+                arabic: ['Salawat', 'Harmattan', '"Geeza Pro"', '"Noto Naskh Arabic"', 'serif'],
+            },
+            spacing: {
+                'safe-t': 'env(safe-area-inset-top, 0px)',
+                'safe-b': 'env(safe-area-inset-bottom, 0px)',
+                'safe-l': 'env(safe-area-inset-left, 0px)',
+                'safe-r': 'env(safe-area-inset-right, 0px)',
+            },
+            transitionTimingFunction: {
+                out: 'cubic-bezier(0.16, 1, 0.3, 1)',
+            },
+            keyframes: {
+                // The signature move: a toron beam pushed out of the wall
+                extrude: {
+                    from: { transform: 'scaleX(0)' },
+                    to: { transform: 'scaleX(1)' },
                 },
-                sand: {
-                    50: '#f0ebe1',
-                    100: '#e8e2d5',
-                    200: '#ddd5c5',
+                rise: {
+                    from: { opacity: '0', transform: 'translateY(6px)' },
+                    to: { opacity: '1', transform: 'translateY(0)' },
+                },
+                breathe: {
+                    '0%, 100%': { opacity: '0.35' },
+                    '50%': { opacity: '1' },
                 },
             },
             animation: {
-                'fade-in-up': 'fadeInUp 0.35s ease-out',
-                'fade-in': 'fadeIn 0.3s ease-out',
-                'slide-in-left': 'slideInLeft 0.3s ease-out',
-                'pulse-dot': 'pulseDot 1.4s ease-in-out infinite',
-                'cursor-blink': 'cursorBlink 1s step-end infinite',
-                'gentle-float': 'gentleFloat 3s ease-in-out infinite',
-            },
-            keyframes: {
-                fadeInUp: {
-                    from: { opacity: '0', transform: 'translateY(8px)' },
-                    to: { opacity: '1', transform: 'translateY(0)' },
-                },
-                fadeIn: {
-                    from: { opacity: '0' },
-                    to: { opacity: '1' },
-                },
-                slideInLeft: {
-                    from: { opacity: '0', transform: 'translateX(-12px)' },
-                    to: { opacity: '1', transform: 'translateX(0)' },
-                },
-                pulseDot: {
-                    '0%, 80%, 100%': { opacity: '0.3', transform: 'scale(0.8)' },
-                    '40%': { opacity: '1', transform: 'scale(1)' },
-                },
-                cursorBlink: {
-                    '0%, 100%': { opacity: '1' },
-                    '50%': { opacity: '0' },
-                },
-                gentleFloat: {
-                    '0%, 100%': { transform: 'translateY(0)' },
-                    '50%': { transform: 'translateY(-6px)' },
-                },
+                extrude: 'extrude 520ms cubic-bezier(0.16, 1, 0.3, 1) both',
+                rise: 'rise 360ms cubic-bezier(0.16, 1, 0.3, 1) both',
+                breathe: 'breathe 1.4s ease-in-out infinite',
             },
         },
     },

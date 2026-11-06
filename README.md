@@ -118,6 +118,16 @@ npm install
 npm run dev                      # http://localhost:3000 (proxy /api → :8000)
 ```
 
+Pour tester sur l'iPhone pendant le développement : `npm run dev -- --host`, puis ouvrir `http://<IP-du-PC>:3000` dans Safari (même réseau Wi-Fi).
+
+### Interface (mobile d'abord)
+
+- **Univers « Banco »** : inspiré des mosquées en terre crue du Sahel. Latérite pour l'en-tête et la barre de saisie, badigeon de kaolin pour la lecture, logo vert et or conservé. Mode **Nuit** pour l'usage avant Fajr ; **Auto** suit le réglage de l'iPhone.
+- **Les sources sortent du mur** : sous chaque réponse, chaque passage est une poutre de rônier dont la longueur indique la pertinence. Toucher une poutre, ou une citation comme « (2:153) » dans le texte, ouvre le verset : arabe (police Harmattan, conçue pour l'arabe d'Afrique de l'Ouest), traduction et récitation.
+- **Réglages** : thème, taille du texte (4 niveaux, arabe compris ; la taille du texte d'iOS est aussi respectée), récitation automatique.
+- **Accessibilité** : contrastes WCAG AA en jour et en nuit, cibles tactiles de 44 pt, VoiceOver (arabe balisé `lang="ar"`), mouvement réduit respecté.
+- **App sur l'écran d'accueil** : dans Safari, Partager → « Sur l'écran d'accueil ». Un service worker met l'interface et les polices en cache pour les connexions lentes ; l'API et l'audio passent toujours par le réseau.
+
 ### Tests
 
 ```powershell

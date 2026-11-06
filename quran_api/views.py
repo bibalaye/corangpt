@@ -27,10 +27,7 @@ logger = logging.getLogger(__name__)
 MAX_QUESTION_CHARS = 1000
 HISTORY_LIMIT = 50
 LIMIT_MESSAGE = "Vous avez atteint votre limite quotidienne de requêtes pour votre abonnement."
-UNAVAILABLE_MESSAGE = (
-    "Le service IA est momentanément saturé (quotas gratuits atteints). "
-    "Réessayez dans quelques minutes."
-)
+UNAVAILABLE_MESSAGE = "La réponse n'est pas disponible pour le moment. Réessayez dans quelques minutes."
 GENERIC_ERROR = "Une erreur est survenue lors de la génération de la réponse."
 
 
@@ -68,9 +65,9 @@ def _parse_question(data) -> tuple[str | None, str, int, str | None]:
     return question, source_filter, source_limit, None
 
 
-def _record_usage(user, question: str, answer: str, sources: list) -> None:
+def _record_usage(user, question: str, answer: str, sources: list) -> ChatHistory:
     UserProfile.for_user(user).increment_request()
-    ChatHistory.objects.create(user=user, query=question, response=answer, sources=sources)
+    return ChatHistory.objects.create(user=user, query=question, response=answer, sources=sources)
 
 
 def _ndjson(payload: dict) -> str:
@@ -126,6 +123,15 @@ class ChatHistoryListView(APIView):
     def get(self, request):
         history = ChatHistory.objects.filter(user=request.user)[:HISTORY_LIMIT]
         return Response(ChatHistorySerializer(history, many=True).data)
+
+
+class ChatHistoryDetailView(APIView):
+    """Delete one saved question/answer (only the owner's)."""
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk: int):
+        deleted, _ = ChatHistory.objects.filter(user=request.user, pk=pk).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT if deleted else status.HTTP_404_NOT_FOUND)
 
 
 # ───────────────────────── search & ask ─────────────────────────
@@ -214,6 +220,7 @@ def quran_ask_stream(request):
     def event_stream():
         parts: list[str] = []
         sources: list[dict] = []
+        recorded = False
         try:
             pipeline = get_rag_pipeline()
             contexts = pipeline.retrieve(question, source_filter, top_k=max(settings.RAG_CONTEXT_K, source_limit))
@@ -223,7 +230,9 @@ def quran_ask_stream(request):
             for chunk in pipeline.answer_stream(question, contexts[:settings.RAG_CONTEXT_K]):
                 parts.append(chunk)
                 yield _ndjson({"type": "token", "data": chunk})
-            yield _ndjson({"type": "done"})
+            entry = _record_usage(user, question, "".join(parts), sources)
+            recorded = True
+            yield _ndjson({"type": "done", "history_id": entry.pk})
         except LLMUnavailableError:
             yield _ndjson({"type": "error", "error_code": "llm_unavailable", "data": UNAVAILABLE_MESSAGE})
         except Exception:
@@ -231,7 +240,7 @@ def quran_ask_stream(request):
             yield _ndjson({"type": "error", "data": GENERIC_ERROR})
         finally:
             # Also runs when the client disconnects mid-answer: what was generated is counted and saved.
-            if parts:
+            if parts and not recorded:
                 try:
                     _record_usage(user, question, "".join(parts), sources)
                 except Exception:

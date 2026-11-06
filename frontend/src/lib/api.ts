@@ -2,6 +2,9 @@ import type { StreamEvent } from '../types/chat'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
+/** Every passage the assistant read is shown to the user (matches RAG_CONTEXT_K on the server). */
+const SOURCES_PER_ANSWER = 8
+
 const getAuthHeaders = (): Record<string, string> => {
     const token = localStorage.getItem('token');
     return token ? { 'Authorization': `Token ${token}` } : {};
@@ -39,6 +42,14 @@ export async function register(username: string, email: string, password: string
     return response.json();
 }
 
+export async function deleteHistory(id: number) {
+    const response = await fetch(`${API_BASE}/history/${id}/`, {
+        method: 'DELETE',
+        headers: { ...getAuthHeaders() },
+    })
+    if (!response.ok && response.status !== 404) throw new Error('Suppression impossible')
+}
+
 export async function fetchHistory() {
     const response = await fetch(`${API_BASE}/history/`, {
         method: 'GET',
@@ -64,7 +75,7 @@ export async function streamQuestion(
     callbacks: {
         onSources: (sources: any[]) => void
         onToken: (token: string) => void
-        onDone: () => void
+        onDone: (historyId?: number) => void
         onError: (error: string, errorCode?: string, resetTime?: string) => void
     },
     signal?: AbortSignal
@@ -75,7 +86,7 @@ export async function streamQuestion(
             'Content-Type': 'application/json',
             ...getAuthHeaders()
         },
-        body: JSON.stringify({ q: question, limit: 5, source_filter: sourceFilter }),
+        body: JSON.stringify({ q: question, limit: SOURCES_PER_ANSWER, source_filter: sourceFilter }),
         signal,
     })
 
@@ -98,7 +109,7 @@ export async function streamQuestion(
         switch (event.type) {
             case 'sources': callbacks.onSources(event.data); break
             case 'token': callbacks.onToken(event.data); break
-            case 'done': callbacks.onDone(); break
+            case 'done': callbacks.onDone(event.history_id); break
             case 'error': callbacks.onError(event.data, event.error_code, event.reset_time); break
         }
     }

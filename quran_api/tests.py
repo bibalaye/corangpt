@@ -120,6 +120,16 @@ class AskStreamTests(ApiTestBase):
         self.assertEqual(UserProfile.objects.get(user=self.user).requests_today, 1)
         history = ChatHistory.objects.get(user=self.user)
         self.assertEqual(history.response, "La patience est une vertu.")
+        self.assertEqual(events[-1]["history_id"], history.pk)
+
+    def test_delete_history(self):
+        mine = ChatHistory.objects.create(user=self.user, query="q", response="r")
+        other = User.objects.create_user("autre", password="Encore-un-mot-de-passe-9")
+        theirs = ChatHistory.objects.create(user=other, query="q", response="r")
+        self.assertEqual(self.client.delete(f"/api/history/{theirs.pk}/").status_code, 404)
+        self.assertEqual(self.client.delete(f"/api/history/{mine.pk}/").status_code, 204)
+        self.assertFalse(ChatHistory.objects.filter(pk=mine.pk).exists())
+        self.assertTrue(ChatHistory.objects.filter(pk=theirs.pk).exists())
 
     def test_quota_reached(self):
         UserProfile.objects.filter(user=self.user).update(requests_today=5)
@@ -243,6 +253,6 @@ class LLMServiceTests(TestCase):
 class PromptTests(TestCase):
     def test_sources_are_numbered_and_truncated(self):
         text = rag.format_sources([dict(DOCS[0], text_fr="mot " * 50)])
-        self.assertTrue(text.startswith("[1] Coran — Sourate 2"))
+        self.assertTrue(text.startswith("[1] (2:153) Coran — Sourate 2"))
         self.assertIn("[…]", text)
         self.assertLess(len(text), 200)

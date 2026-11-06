@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import type { Conversation, Message, QuranVerse } from '../types/chat'
-import { streamQuestion, fetchHistory } from '../lib/api'
+import { streamQuestion, fetchHistory, deleteHistory } from '../lib/api'
 import { useAuth } from './useAuth'
 
 /** Generate a unique ID */
@@ -23,7 +23,7 @@ const parseDuration = (label: string | null): number => {
 /** Create a blank conversation */
 const createConversation = (): Conversation => ({
     id: uid(),
-    title: 'Nouveau chat',
+    title: 'Nouvelle question',
     messages: [],
     createdAt: new Date(),
 })
@@ -32,18 +32,13 @@ export function useChat() {
     const { token } = useAuth();
 
 
-    const [conversations, setConversations] = useState<Conversation[]>(() => {
-        const fresh = createConversation();
-        const savedId = sessionStorage.getItem('currentChatId');
-        if (savedId && savedId.includes('-')) {
-            fresh.id = savedId;
-        }
-        return [fresh];
-    });
-
+    const [conversations, setConversations] = useState<Conversation[]>(() => [createConversation()])
     const [currentId, setCurrentId] = useState<string>(
-        sessionStorage.getItem('currentChatId') || conversations[0].id
-    );
+        () => sessionStorage.getItem('currentChatId') || conversations[0].id
+    )
+    // Latest list, read by the history loader without putting side effects in a state updater
+    const conversationsRef = useRef(conversations)
+    conversationsRef.current = conversations
 
     const isInitialMount = useRef(true);
     const [isStreaming, setIsStreaming] = useState(false);
@@ -51,73 +46,43 @@ export function useChat() {
     const abortRef = useRef<AbortController | null>(null);
 
     useEffect(() => {
-        if (token) {
-            fetchHistory().then((historyItems: any[]) => {
-                const loadedConvos = historyItems && historyItems.length > 0 ? historyItems.map(item => ({
-                    id: item.id.toString(),
-                    title: item.query.length > 40 ? item.query.slice(0, 40) + '…' : item.query,
-                    createdAt: new Date(item.created_at),
-                    messages: [
-                        { id: uid(), role: 'user', content: item.query, createdAt: new Date(item.created_at) } as Message,
-                        { id: uid(), role: 'assistant', content: item.response, sources: (item.sources || []), createdAt: new Date(item.created_at) } as Message
-                    ]
-                })) : [];
+        // Ignore a response that belongs to a previous run (token change, StrictMode re-run)
+        let cancelled = false
+        const draft = () => conversationsRef.current.find(c => c.messages.length === 0) ?? createConversation()
 
-                setConversations(prev => {
-                    const savedId = sessionStorage.getItem('currentChatId');
-                    // Find an empty chat if we had one locally
-                    const emptyLocals = prev.filter(c => c.messages.length === 0);
-
-                    // See if the saved session ID was an empty chat ID
-                    const emptyToKeep = emptyLocals.find(c => c.id === savedId)
-                        || (emptyLocals.length > 0 ? emptyLocals[0] : createConversation());
-
-                    if (savedId && savedId === emptyToKeep.id) {
-                        emptyToKeep.id = savedId;
-                    }
-
-                    const newConvos = [emptyToKeep, ...loadedConvos];
-
-                    if (isInitialMount.current) {
-                        if (savedId && newConvos.some(c => c.id === savedId)) {
-                            setCurrentId(savedId);
-                        } else {
-                            setCurrentId(emptyToKeep.id);
-                        }
-                    } else {
-                        // We came here dynamically (login). We put the user on the empty chat.
-                        setCurrentId(emptyToKeep.id);
-                    }
-
-                    return newConvos;
-                });
-
-                isInitialMount.current = false;
-            }).catch(e => {
-                console.error(e);
-                isInitialMount.current = false;
-            });
-        } else {
-            setConversations(prev => {
-                const emptyLocals = prev.filter(c => c.messages.length === 0);
-                const savedId = sessionStorage.getItem('currentChatId');
-
-                const emptyToKeep = emptyLocals.find(c => c.id === savedId)
-                    || (emptyLocals.length > 0 ? emptyLocals[0] : createConversation());
-
-                if (savedId && savedId === emptyToKeep.id) {
-                    emptyToKeep.id = savedId;
-                    setCurrentId(savedId);
-                } else if (!isInitialMount.current) {
-                    setCurrentId(emptyToKeep.id);
-                } else {
-                    setCurrentId(emptyToKeep.id);
-                }
-
-                return [emptyToKeep];
-            });
-            isInitialMount.current = false;
+        if (!token) {
+            const empty = draft()
+            setConversations([empty])
+            setCurrentId(empty.id)
+            isInitialMount.current = false
+            return () => { cancelled = true }
         }
+
+        fetchHistory().then((historyItems: any[]) => {
+            if (cancelled) return
+            const loaded: Conversation[] = (historyItems ?? []).map(item => ({
+                id: item.id.toString(),
+                title: item.query.length > 40 ? item.query.slice(0, 40) + '…' : item.query,
+                createdAt: new Date(item.created_at),
+                messages: [
+                    { id: uid(), role: 'user', content: item.query, createdAt: new Date(item.created_at) },
+                    { id: uid(), role: 'assistant', content: item.response, sources: item.sources || [], serverId: item.id, createdAt: new Date(item.created_at) },
+                ],
+            }))
+            const empty = draft()
+            const next = [empty, ...loaded]
+            // On reload, reopen the conversation that was on screen; after a fresh login, start blank
+            const savedId = sessionStorage.getItem('currentChatId')
+            const restore = isInitialMount.current && savedId && next.some(c => c.id === savedId)
+            isInitialMount.current = false
+            setConversations(next)
+            setCurrentId(restore ? savedId! : empty.id)
+        }).catch(e => {
+            if (cancelled) return
+            console.error(e)
+            isInitialMount.current = false
+        })
+        return () => { cancelled = true }
     }, [token]);
 
     // Update sessionStorage continuously
@@ -178,16 +143,14 @@ export function useChat() {
 
     /** Start a new conversation */
     const newChat = useCallback(() => {
-        setConversations(prev => {
-            const emptyChat = prev.find(c => c.messages.length === 0);
-            if (emptyChat) {
-                setCurrentId(emptyChat.id);
-                return prev;
-            }
-            const conv = createConversation();
-            setCurrentId(conv.id);
-            return [conv, ...prev];
-        });
+        const empty = conversationsRef.current.find(c => c.messages.length === 0)
+        if (empty) {
+            setCurrentId(empty.id)
+            return
+        }
+        const conv = createConversation()
+        setConversations(prev => [conv, ...prev])
+        setCurrentId(conv.id)
     }, [])
 
     /** Switch to an existing conversation */
@@ -195,21 +158,29 @@ export function useChat() {
         setCurrentId(id)
     }, [])
 
-    /** Delete a conversation */
+    /** Delete a conversation — on the server too, so it does not come back on reload */
     const deleteConversation = useCallback(
         (id: string) => {
-            setConversations(prev => {
-                const remaining = prev.filter(c => c.id !== id)
-                if (remaining.length === 0) {
-                    const fresh = createConversation()
-                    setCurrentId(fresh.id)
-                    return [fresh]
-                }
-                if (id === currentId) {
-                    setCurrentId(remaining[0].id)
-                }
-                return remaining
-            })
+            const list = conversationsRef.current
+            const target = list.find(c => c.id === id)
+            if (!target) return
+            const index = list.indexOf(target)
+            const serverIds = new Set<number>(
+                target.messages.map(m => m.serverId).filter((n): n is number => typeof n === 'number')
+            )
+            if (/^\d+$/.test(id)) serverIds.add(Number(id))
+
+            const remaining = list.filter(c => c.id !== id)
+            const next = remaining.length > 0 ? remaining : [createConversation()]
+            setConversations(next)
+            if (id === currentId || remaining.length === 0) setCurrentId(next[0].id)
+
+            if (serverIds.size > 0) {
+                Promise.all([...serverIds].map(deleteHistory)).catch(() => {
+                    // Put it back where it was: the user must not believe it is gone
+                    setConversations(cur => cur.some(c => c.id === id) ? cur : [...cur.slice(0, index), target, ...cur.slice(index)])
+                })
+            }
         },
         [currentId]
     )
@@ -275,9 +246,9 @@ export function useChat() {
                             pending += token
                             if (!frame) frame = requestAnimationFrame(flush)
                         },
-                        onDone: () => {
+                        onDone: (historyId?: number) => {
                             flush()
-                            patchAssistant(() => ({ isStreaming: false }))
+                            patchAssistant(() => ({ isStreaming: false, serverId: historyId }))
                         },
                         onError: (error: string, errorCode?: string, resetTime?: string) => {
                             flush()
@@ -285,10 +256,7 @@ export function useChat() {
                                 removeOptimistic()
                                 markLimitReached(resetTime)
                             } else {
-                                patchAssistant(m => ({
-                                    content: m.content ? `${m.content}\n\n*${error}*` : error,
-                                    isStreaming: false,
-                                }))
+                                patchAssistant(() => ({ error, isStreaming: false }))
                             }
                         },
                     },
@@ -301,19 +269,36 @@ export function useChat() {
                     removeOptimistic()
                     markLimitReached(err.resetTime)
                 } else {
+                    const offline = typeof navigator !== 'undefined' && navigator.onLine === false
                     patchAssistant(() => ({
-                        content: err.message || 'Désolé, une erreur est survenue.',
+                        error: offline ? 'Pas de connexion. Vérifiez votre réseau puis réessayez.' : (err.message || 'Une erreur est survenue.'),
                         isStreaming: false,
                     }))
                 }
             } finally {
                 flush()
+                // The stream can end without "done" (connection cut): never leave the answer spinning
+                patchAssistant(m => (m.isStreaming
+                    ? { isStreaming: false, error: m.error ?? (m.content ? undefined : 'La réponse a été interrompue. Vérifiez votre connexion puis réessayez.') }
+                    : {}))
                 setIsStreaming(false)
                 abortRef.current = null
             }
         },
         [isStreaming, currentMessages.length, sourceFilter, updateMessages, updateConversationTitle, markLimitReached]
     )
+
+    /** Re-ask the question whose answer failed */
+    const retryLast = useCallback(() => {
+        const msgs = currentMessages
+        const failedIndex = msgs.length - 1
+        if (failedIndex < 1 || !msgs[failedIndex].error || msgs[failedIndex - 1].role !== 'user') return
+        const question = msgs[failedIndex - 1].content
+        const failedIds = new Set([msgs[failedIndex].id, msgs[failedIndex - 1].id])
+        updateMessages(list => list.filter(m => !failedIds.has(m.id)))
+        // Let the removal land before the optimistic pair of the retry is added
+        setTimeout(() => sendMessage(question), 0)
+    }, [currentMessages, updateMessages, sendMessage])
 
     return {
         conversations,
@@ -330,5 +315,6 @@ export function useChat() {
         selectConversation,
         deleteConversation,
         stopGeneration,
+        retryLast,
     }
 }

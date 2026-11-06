@@ -73,3 +73,12 @@ frontend/.vite/
 *.bak
 *.tmp
 .cache/
+
+# ============================================================
+# Impeccable (design workflow) — working files stay local;
+# .impeccable/surfaces/ and .impeccable/design.json are versioned
+# ============================================================
+.impeccable/review/
+.impeccable/mocks/
+.impeccable/questions/
+.impeccable/decision-payload.json

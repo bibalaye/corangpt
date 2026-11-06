@@ -32,6 +32,16 @@ SOURCE_FILTERS = ("both", "quran", "hadith")
 RRF_K = 60  # standard Reciprocal Rank Fusion constant
 
 
+def source_label(doc: dict) -> str:
+    """Canonical short label shown everywhere in the UI and used by the LLM to cite: "2:153", "Bukhari 1302"."""
+    meta = doc.get("metadata") or {}
+    if doc.get("source_type") == "Hadith":
+        return f"Bukhari {meta['hadith_number']}" if meta.get("hadith_number") else doc.get("reference", "")
+    if meta.get("sourate") and meta.get("ayah"):
+        return f"{meta['sourate']}:{meta['ayah']}"
+    return doc.get("reference", "")
+
+
 class VectorService:
     def __init__(self, index_dir: str | Path, embedder):
         index_dir = Path(index_dir)
@@ -49,6 +59,8 @@ class VectorService:
 
         if len(self.docs) != self.vectors.shape[0]:
             raise ValueError("docs.json.gz and vectors.npy have different lengths")
+        for doc in self.docs:
+            doc.setdefault("label", source_label(doc))
 
         self._masks: dict[str, np.ndarray] = {}
         for name, rng in manifest["sources"].items():

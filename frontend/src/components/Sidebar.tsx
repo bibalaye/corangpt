@@ -1,210 +1,148 @@
+import { useState } from 'react'
+import { Ellipsis, Settings, SquarePen, X } from 'lucide-react'
 import type { Conversation } from '../types/chat'
-import { useAudioSettings } from '../hooks/useAudioSettings'
+import type { User } from '../hooks/useAuth'
+import { IconButton } from './IconButton'
 
-interface SidebarProps {
+interface ConversationPanelProps {
     conversations: Conversation[]
     currentId: string
-    isOpen: boolean
-    theme: 'light' | 'dark'
+    user: User | null
     onNewChat: () => void
     onSelect: (id: string) => void
     onDelete: (id: string) => void
-    onToggleTheme: () => void
+    onOpenSettings: () => void
+    onSignIn: () => void
+    /** Present in the mobile drawer only */
+    onClose?: () => void
+    titleId: string
 }
 
-/**
- * Left sidebar with conversation history, new chat button, and theme toggle.
- * Slides in on mobile, always visible on desktop.
- */
-export function Sidebar({
-    conversations,
-    currentId,
-    isOpen,
-    theme,
-    onNewChat,
-    onSelect,
-    onDelete,
-    onToggleTheme,
-}: SidebarProps) {
-    const { autoPlay, toggleAutoPlay } = useAudioSettings()
+const dayStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+
+function groupLabel(date: Date): string {
+    const days = Math.round((dayStart(new Date()) - dayStart(date)) / 86_400_000)
+    if (days <= 0) return 'Aujourd’hui'
+    if (days === 1) return 'Hier'
+    if (days < 7) return 'Cette semaine'
+    if (days < 31) return 'Ce mois-ci'
+    return 'Plus ancien'
+}
+
+function timeLabel(date: Date): string {
+    return dayStart(date) === dayStart(new Date())
+        ? date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+        : date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+}
+
+/** "Vos questions": past conversations, new question, account and settings. */
+export function ConversationPanel({ conversations, currentId, user, onNewChat, onSelect, onDelete, onOpenSettings, onSignIn, onClose, titleId }: ConversationPanelProps) {
+    const [confirming, setConfirming] = useState<string | null>(null)
+    const past = conversations.filter(c => c.messages.length > 0)
+    const groups: { label: string; items: Conversation[] }[] = []
+    for (const c of past) {
+        const label = groupLabel(c.createdAt)
+        const group = groups.find(g => g.label === label)
+        if (group) group.items.push(c)
+        else groups.push({ label, items: [c] })
+    }
 
     return (
-        <aside
-            className={`
-        fixed md:relative z-50 md:z-auto
-        w-[260px] h-full flex-shrink-0
-        bg-[#f9f9f9] dark:bg-[#171717]
-        flex flex-col
-        transition-transform duration-300 ease-out
-        ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-      `}
-        >
-            {/* Header / Action Buttons */}
-            <div className="p-3">
-                {/* Optional Mobile only Close Button could go here */}
+        <div className="flex h-full flex-col">
+            <div className={onClose ? 'bg-shell pt-safe-t text-on-shell' : ''}>
+                <div className="flex h-14 items-center gap-2 pl-4 pr-1.5">
+                    <h2 id={titleId} className="flex-1 text-[1.0625rem] font-semibold">Vos questions</h2>
+                    {onClose && (
+                        <IconButton label="Fermer" tone="shell" onClick={onClose}>
+                            <X aria-hidden="true" size={22} />
+                        </IconButton>
+                    )}
+                </div>
+            </div>
 
+            <div className="px-3 pb-2 pt-3">
                 <button
+                    type="button"
                     onClick={onNewChat}
-                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg
-                     hover:bg-stone-200/50 dark:hover:bg-[#202123]
-                     transition-colors group"
+                    className="press flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-quran font-semibold text-quran-on hover:bg-quran/90"
                 >
-                    <div className="flex items-center gap-3 text-[14px] font-medium text-stone-800 dark:text-[#ececf1]">
-                        <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 border border-stone-200 dark:border-stone-700/50 bg-white dark:bg-[#202123] shadow-sm">
-                            <span className="text-lg leading-none -mt-0.5">☪</span>
-                        </div>
-                        IA Coranique
-                    </div>
-                    {/* Write Icon */}
-                    <svg className="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
-                    </svg>
+                    <SquarePen aria-hidden="true" size={18} />
+                    Nouvelle question
                 </button>
             </div>
 
-            {/* Conversation list */}
-            <div className="flex-1 overflow-y-auto px-3 py-1 space-y-1">
-                {conversations.length > 0 && (
-                    <div className="px-2 py-1 mt-1 mb-1">
-                        <p className="text-[12px] font-semibold text-stone-400 dark:text-stone-500">Aujourd'hui</p>
-                    </div>
+            <nav aria-label="Conversations" className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4">
+                {groups.length === 0 && (
+                    <p className="px-2 pt-6 text-[0.9375rem] text-ink-3">
+                        {user ? 'Vos questions apparaîtront ici.' : 'Connectez-vous pour retrouver vos questions ici.'}
+                    </p>
                 )}
-                {conversations.map(conv => (
-                    <div
-                        key={conv.id}
-                        className={`group flex items-center gap-2.5 px-3 py-2.5 rounded-lg cursor-pointer
-                        transition-colors text-[14px]
-                        ${conv.id === currentId
-                                ? 'bg-stone-200/50 dark:bg-[#202123] text-stone-900 dark:text-stone-100 font-medium'
-                                : 'text-stone-600 dark:text-[#ececf1] hover:bg-stone-200/50 dark:hover:bg-[#202123]'
-                            }`}
-                        onClick={() => onSelect(conv.id)}
-                    >
-                        <span className="truncate flex-1 font-normal opacity-90">{conv.title}</span>
-
-                        {/* Delete button — visible on hover */}
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onDelete(conv.id) }}
-                            className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-500 hover:text-red-500 transition-colors"
-                            aria-label="Supprimer"
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-                ))}
-            </div>
-
-            {/* Footer / User Settings & Profile */}
-            <div className="p-3 flex flex-col gap-2 mt-auto">
-                <div className="flex items-center gap-1.5 px-2">
-                    {/* Theme toggle */}
-                    <button
-                        onClick={onToggleTheme}
-                        className="p-1.5 rounded-lg hover:bg-stone-200/80 dark:hover:bg-[#202123] text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200 transition-colors"
-                        aria-label="Changer de thème"
-                        title="Changer de thème"
-                    >
-                        {theme === 'light' ? (
-                            <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
-                            </svg>
-                        ) : (
-                            <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
-                            </svg>
-                        )}
-                    </button>
-
-                    {/* Auto-play audio toggle */}
-                    <button
-                        onClick={toggleAutoPlay}
-                        className={`p-1.5 rounded-lg transition-colors ${autoPlay
-                            ? 'bg-[#10a37f]/10 text-[#10a37f] dark:bg-[#10a37f]/20'
-                            : 'hover:bg-stone-200/80 dark:hover:bg-[#202123] text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200'
-                            }`}
-                        aria-label="Lecture audio automatique"
-                        title="Lecture audio automatique"
-                    >
-                        <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                            {autoPlay ? (
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
-                            ) : (
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6L4.72 1.5M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
-                            )}
-                        </svg>
-                    </button>
-                    <span className="text-[11px] text-stone-400 dark:text-stone-600 ml-auto">
-                        abibou © 2026
-                    </span>
-                </div>
-
-                {/* Profil Utilisateur */}
-                {(() => {
-                    const token = localStorage.getItem('token');
-                    const userStr = localStorage.getItem('user');
-                    const user = userStr ? JSON.parse(userStr) : null;
-
-                    if (token && user) {
-                        const initials = user.username ? user.username.substring(0, 2).toUpperCase() : '👤';
-                        const planName = user.profile?.subscription_plan?.name || 'Free';
-                        return (
-                            <div className="relative group w-full">
-                                <div className="flex items-center justify-between w-full p-2.5 hover:bg-stone-200/50 dark:hover:bg-[#202123] rounded-xl transition-colors cursor-pointer select-none">
-                                    <div className="flex items-center gap-3 min-w-0 pr-1">
-                                        <div className="w-[34px] h-[34px] rounded-full bg-[#10a37f] flex flex-shrink-0 items-center justify-center text-white text-[13px] font-semibold shadow-sm">
-                                            {initials}
-                                        </div>
-                                        <div className="flex flex-col min-w-0">
-                                            <span className="text-[14px] font-medium text-stone-900 dark:text-[#ececf1] truncate leading-tight">
-                                                {user.username}
-                                            </span>
-                                            <span className="text-[12px] text-stone-500 dark:text-stone-400 capitalize mt-0.5">
-                                                {planName}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-1">
-                                        {/* Button Upgrade if 'Free' or basic */}
-                                        {planName.toLowerCase() === 'free' && (
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); window.location.href = '#premium'; }}
-                                                className="hidden md:block px-3 py-[5px] ml-1 bg-white hover:bg-stone-50 dark:bg-stone-800 dark:hover:bg-stone-700 border border-stone-200 dark:border-stone-700 rounded-full text-[12px] font-medium text-stone-800 dark:text-gray-300 transition-colors shadow-sm whitespace-nowrap"
-                                            >
-                                                Mettre à niveau
-                                            </button>
-                                        )}
-
-                                        {/* Logout Button reveals on group hover */}
+                {groups.map(group => (
+                    <section key={group.label} className="pt-4">
+                        <h3 className="px-2 pb-1 text-[0.8125rem] font-semibold text-ink-3">{group.label}</h3>
+                        <ul>
+                            {group.items.map(c => {
+                                const current = c.id === currentId
+                                if (confirming === c.id) {
+                                    return (
+                                        <li key={c.id} className="my-1 rounded-2xl bg-danger/10 p-3">
+                                            <p className="text-[0.9375rem] text-ink">Supprimer « {c.title} » ?</p>
+                                            <p className="mt-0.5 text-[0.8125rem] text-ink-2">La question et sa réponse seront effacées de votre historique.</p>
+                                            <div className="mt-3 flex gap-2">
+                                                <button type="button" onClick={() => setConfirming(null)} className="press h-11 flex-1 rounded-xl bg-surface font-semibold text-ink">
+                                                    Annuler
+                                                </button>
+                                                <button type="button" onClick={() => { setConfirming(null); onDelete(c.id) }} className="press h-11 flex-1 rounded-xl bg-danger font-semibold text-ground">
+                                                    Supprimer
+                                                </button>
+                                            </div>
+                                        </li>
+                                    )
+                                }
+                                return (
+                                    <li key={c.id} className={`flex items-center rounded-xl ${current ? 'bg-sunk' : ''}`}>
                                         <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                const event = new CustomEvent('logout-user');
-                                                document.dispatchEvent(event);
-                                            }}
-                                            className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                                            title="Se déconnecter"
+                                            type="button"
+                                            aria-current={current ? 'page' : undefined}
+                                            onClick={() => onSelect(c.id)}
+                                            className="press flex min-h-12 min-w-0 flex-1 flex-col justify-center rounded-xl py-2 pl-3 pr-1 text-left hover:bg-sunk/60"
                                         >
-                                            <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                                            <span className={`w-full truncate text-[0.9375rem] ${current ? 'font-semibold text-ink' : 'text-ink'}`}>{c.title}</span>
+                                            <span className="text-[0.8125rem] text-ink-3">{timeLabel(c.createdAt)}</span>
                                         </button>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    } else {
-                        return (
-                            <button
-                                onClick={() => document.dispatchEvent(new CustomEvent('open-auth-modal'))}
-                                className="w-full mt-2 flex items-center justify-center gap-2 text-[14px] py-[11px] px-3 rounded-xl bg-[#10a37f] hover:bg-[#0e906f] text-white font-medium transition-colors shadow-sm"
-                            >
-                                Se connecter
-                            </button>
-                        );
-                    }
-                })()}
+                                        <IconButton label={`Options pour « ${c.title} »`} onClick={() => setConfirming(c.id)}>
+                                            <Ellipsis aria-hidden="true" size={20} />
+                                        </IconButton>
+                                    </li>
+                                )
+                            })}
+                        </ul>
+                    </section>
+                ))}
+            </nav>
+
+            <div className="flex items-center gap-3 border-t border-line px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-3">
+                {user ? (
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <span aria-hidden="true" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-shell text-[0.875rem] font-semibold text-on-shell">
+                            {user.username.slice(0, 2).toUpperCase()}
+                        </span>
+                        <span className="min-w-0">
+                            <span className="block truncate font-semibold text-ink">{user.username}</span>
+                            <span className="block text-[0.8125rem] text-ink-3">
+                                Formule {user.profile?.subscription_plan?.name === 'free' ? 'gratuite' : user.profile?.subscription_plan?.name ?? 'gratuite'}
+                            </span>
+                        </span>
+                    </div>
+                ) : (
+                    <button type="button" onClick={onSignIn} className="press h-11 flex-1 rounded-xl bg-ink font-semibold text-ground">
+                        Se connecter
+                    </button>
+                )}
+                <IconButton label="Réglages" onClick={onOpenSettings}>
+                    <Settings aria-hidden="true" size={22} />
+                </IconButton>
             </div>
-        </aside>
+        </div>
     )
 }

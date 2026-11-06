@@ -10,7 +10,7 @@ from collections.abc import Iterator
 from django.conf import settings
 
 from .llm_service import LLMService, LLMUnavailableError, get_llm_service
-from .vector_service import get_vector_service
+from .vector_service import get_vector_service, source_label
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +21,8 @@ fournis dans le message (section SOURCES).
 
 Règles :
 - N'utilise que les SOURCES fournies. N'invente jamais de verset, de hadith ni de référence.
-- Cite chaque source utilisée avec sa référence exacte, telle qu'écrite dans les SOURCES \
-(ex. « Sourate 2 (Al-Baqara), Verset 153 »).
+- Cite chaque source utilisée par sa référence courte entre parenthèses, exactement comme dans \
+les SOURCES : (2:153) pour un verset, (Bukhari 1302) pour un hadith. N'utilise aucune autre forme de référence.
 - Explique le sens des textes de façon claire et pédagogique, en les reliant à la question.
 - Si plusieurs sources se complètent, fais la synthèse ; ignore celles qui sont hors sujet.
 - Si aucune source ne traite de la question, réponds exactement : \
@@ -53,8 +53,9 @@ def format_sources(contexts: list[dict]) -> str:
     """Numbered, length-capped sources (some hadiths exceed 15 000 characters)."""
     blocks = []
     for i, ctx in enumerate(contexts, 1):
+        label = ctx.get("label") or source_label(ctx)
         blocks.append(
-            f"[{i}] {ctx.get('source_type', 'Coran')} — {ctx['reference']}\n"
+            f"[{i}] ({label}) {ctx.get('source_type', 'Coran')} — {ctx['reference']}\n"
             f"Arabe : {_truncate(ctx.get('text_ar', ''), settings.RAG_MAX_AR_CHARS)}\n"
             f"Français : {_truncate(ctx.get('text_fr', ''), settings.RAG_MAX_FR_CHARS)}"
         )

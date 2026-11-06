@@ -1,58 +1,50 @@
+import { ChevronRight } from 'lucide-react'
+
 interface WelcomeScreenProps {
     onSuggestion: (question: string) => void
 }
 
 const SUGGESTIONS = [
-    'Que dit le Coran sur la patience ?',
-    'Parle-moi de la création de l\'univers.',
-    'Quels sont les droits des parents ?',
-    'Bienfaits de la prière de nuit.',
+    'Que dit le Coran sur la patience dans les épreuves ?',
+    'Quels sont les droits des parents ?',
+    'Quels sont les bienfaits de la prière de nuit ?',
+    'Comment le Coran décrit-il la création de l’univers ?',
 ]
 
 /**
- * Welcome screen shown when no messages exist.
- * Displays a greeting and clickable suggestion cards.
+ * Empty conversation. Everything sits at the bottom, just above the question
+ * field, so the first tap is in thumb reach.
  */
 export function WelcomeScreen({ onSuggestion }: WelcomeScreenProps) {
     return (
-        <div className="flex-1 flex flex-col items-center justify-center p-6 mt-10 md:mt-0">
-            <div className="max-w-xl text-center animate-fade-in-up w-full">
-                {/* Icon */}
-                <div className="mb-6 flex justify-center">
-                    <div className="flex items-center justify-center w-14 h-14 rounded-full bg-stone-100 dark:bg-[#2f2f2f] shadow-sm">
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-stone-700 dark:text-stone-300">
-                            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path>
-                        </svg>
-                    </div>
-                </div>
+        <section aria-labelledby="welcome-title" className="flex flex-1 flex-col justify-end px-4 pb-4 pt-10">
+            <h1 id="welcome-title" className="px-1">
+                <span lang="ar" dir="rtl" className="block text-left font-arabic text-[2.75rem] leading-[1.35] text-ink">
+                    السَّلَامُ عَلَيْكُمْ
+                </span>
+                <span className="mt-1 block text-[1.375rem] font-semibold leading-snug tracking-[-0.01em] text-ink">
+                    Que la paix soit sur vous.
+                </span>
+            </h1>
+            <p className="reading mt-3 max-w-[34rem] px-1 text-ink-2">
+                Posez votre question. Chaque réponse cite les versets du Coran et les hadiths de Sahih al-Bukhari sur lesquels elle s’appuie, à lire et à écouter.
+            </p>
 
-                {/* Title */}
-                <h2 className="text-[28px] font-semibold text-stone-900 dark:text-gray-100 mb-2 tracking-tight">
-                    Comment puis-je vous aider aujourd'hui ?
-                </h2>
-
-                {/* Subtitle */}
-                <p className="text-stone-500 dark:text-stone-400 text-[15px] mb-10 max-w-sm mx-auto">
-                    Posez vos questions sur le Saint Coran. Les réponses s'appuient sur les versets et Hadiths authentiques.
-                </p>
-
-                {/* Suggestion grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
-                    {SUGGESTIONS.map((text, i) => (
+            <h2 className="sr-only">Exemples de questions</h2>
+            <ul className="mt-6 divide-y divide-line overflow-hidden rounded-2xl bg-surface">
+                {SUGGESTIONS.map(text => (
+                    <li key={text}>
                         <button
-                            key={i}
+                            type="button"
                             onClick={() => onSuggestion(text)}
-                            className="text-left px-5 py-3.5 rounded-xl
-                         bg-white dark:bg-[#2f2f2f] border border-stone-200 dark:border-stone-700/60
-                         text-[14px] text-stone-600 dark:text-gray-300
-                         hover:bg-stone-50 dark:hover:bg-[#343541]
-                         transition-all duration-200 shadow-[0_0_15px_rgba(0,0,0,0.01)] dark:shadow-none"
+                            className="press flex min-h-14 w-full items-center gap-3 py-3 pl-4 pr-3 text-left active:bg-sunk hover:bg-sunk/60"
                         >
-                            <span className="line-clamp-2">{text}</span>
+                            <span className="flex-1 text-[1rem] leading-snug text-ink">{text}</span>
+                            <ChevronRight aria-hidden="true" size={18} className="shrink-0 text-ink-3" />
                         </button>
-                    ))}
-                </div>
-            </div>
-        </div>
+                    </li>
+                ))}
+            </ul>
+        </section>
     )
 }

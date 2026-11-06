@@ -1,49 +1,48 @@
-import { useState, useEffect } from 'react'
-import { useTheme } from './hooks/useTheme'
+import { useEffect, useState } from 'react'
 import { useChat } from './hooks/useChat'
-import { ChatLayout } from './components/ChatLayout'
-import { AudioSettingsProvider } from './hooks/useAudioSettings'
-import { AuthModal } from './components/AuthModal'
-import { LimitModal } from './components/LimitModal'
 import { useAuth } from './hooks/useAuth'
+import { useMedia } from './hooks/useMedia'
+import { ChatLayout } from './components/ChatLayout'
+import { AuthSheet } from './components/AuthSheet'
+import { LimitSheet } from './components/LimitSheet'
 
 export default function App() {
-    const { theme, toggleTheme } = useTheme()
     const { logout } = useAuth()
+    const media = useMedia()
     const chat = useChat()
-    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
-    const [isLimitModalOpen, setIsLimitModalOpen] = useState(false)
+    const [authOpen, setAuthOpen] = useState(false)
+    const [limitOpen, setLimitOpen] = useState(false)
     const [limitResetTime, setLimitResetTime] = useState<string | null>(null)
 
+    // useChat and the API layer open these sheets through document events
     useEffect(() => {
-        const handleOpenAuth = () => setIsAuthModalOpen(true);
-        const handleOpenLimit = (e: Event) => {
-            const customEvent = e as CustomEvent;
-            if (customEvent.detail?.resetTime) {
-                setLimitResetTime(customEvent.detail.resetTime);
-            }
-            setIsLimitModalOpen(true);
-        };
-        const handleLogout = () => logout();
-
-        document.addEventListener('open-auth-modal', handleOpenAuth);
-        document.addEventListener('open-limit-modal', handleOpenLimit);
-        document.addEventListener('logout-user', handleLogout);
-
+        const openAuth = () => setAuthOpen(true)
+        const openLimit = (e: Event) => {
+            const reset = (e as CustomEvent).detail?.resetTime
+            if (reset) setLimitResetTime(reset)
+            setLimitOpen(true)
+        }
+        const signOut = () => logout()
+        document.addEventListener('open-auth-modal', openAuth)
+        document.addEventListener('open-limit-modal', openLimit)
+        document.addEventListener('logout-user', signOut)
         return () => {
-            document.removeEventListener('open-auth-modal', handleOpenAuth);
-            document.removeEventListener('open-limit-modal', handleOpenLimit);
-            document.removeEventListener('logout-user', handleLogout);
-        };
-    }, [logout]);
+            document.removeEventListener('open-auth-modal', openAuth)
+            document.removeEventListener('open-limit-modal', openLimit)
+            document.removeEventListener('logout-user', signOut)
+        }
+    }, [logout])
 
     return (
-        <AudioSettingsProvider>
-            <div className={theme}>
-                <ChatLayout chat={chat} theme={theme} onToggleTheme={toggleTheme} />
-                {isAuthModalOpen && <AuthModal onClose={() => setIsAuthModalOpen(false)} />}
-                {isLimitModalOpen && <LimitModal onClose={() => setIsLimitModalOpen(false)} resetTime={limitResetTime} />}
-            </div>
-        </AudioSettingsProvider>
+        <>
+            <ChatLayout
+                chat={chat}
+                onSignIn={() => setAuthOpen(true)}
+                onSignOut={() => { media.stop(); logout() }}
+                onShowLimit={() => setLimitOpen(true)}
+            />
+            <AuthSheet open={authOpen} onClose={() => setAuthOpen(false)} />
+            <LimitSheet open={limitOpen} onClose={() => setLimitOpen(false)} resetTime={limitResetTime ?? chat.nextResetTime} />
+        </>
     )
 }

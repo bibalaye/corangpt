@@ -3,15 +3,37 @@
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="IA Coran — Assistant coranique intelligent avec réponses sourcées en temps réel." />
-  <title>IA Coran — Assistant Coranique</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Amiri&display=swap"
-    rel="stylesheet" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+  <meta name="description" content="IA Coran — questions sur l'Islam, réponses sourcées dans le Coran et Sahih al-Bukhari." />
+  <title>IA Coran</title>
+
+  <meta name="color-scheme" content="light dark" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#8E3A1C" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#3E1B0E" />
+
+  <!-- Home-screen app on iPhone -->
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="IA Coran" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="/icon-180.png" />
+  <link rel="icon" type="image/svg+xml" href="/mark.svg" />
+
+  <link rel="preload" href="/fonts/harmattan-arabic-400.woff2" as="font" type="font/woff2" crossorigin />
+
+  <!-- Apply the saved theme and text size before the first paint (no flash at night) -->
+  <script>
+    (function () {
+      try {
+        var pref = localStorage.getItem('iacoran-theme') || 'auto';
+        var dark = pref === 'dark' || (pref === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+        if (dark) document.documentElement.classList.add('dark');
+        var scale = parseFloat(localStorage.getItem('iacoran-text-scale') || '1');
+        if (scale > 0) document.documentElement.style.setProperty('--text-scale', String(scale));
+      } catch (e) { }
+    })();
+  </script>
 </head>
 
 <body>

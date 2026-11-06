@@ -1,140 +1,138 @@
-import { useState, useEffect, memo, lazy, Suspense } from 'react'
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { CircleAlert, RotateCcw, Square, Volume2 } from 'lucide-react'
 import type { Message } from '../types/chat'
-import { QuranVerse } from './QuranVerse'
-import { useAudioSettings } from '../hooks/useAudioSettings'
+import { citedLabels, sourceLabel, speakable } from '../lib/sources'
+import { useMedia } from '../hooks/useMedia'
+import { SourceWall } from './SourceWall'
 
 const Markdown = lazy(() => import('./Markdown'))
 
 interface MessageBubbleProps {
     message: Message
+    isLast: boolean
+    onRetry: () => void
 }
 
-/**
- * Individual message bubble — user or assistant.
- *
- * Assistant messages render markdown with prose styling.
- * Shows a streaming cursor when content is still being generated.
- * Displays Quran verse sources below the response.
- */
-// memo: while an answer streams, only that bubble re-renders (not the whole thread)
-export const MessageBubble = memo(function MessageBubble({ message }: MessageBubbleProps) {
-    const isUser = message.role === 'user'
-    const { autoPlay } = useAudioSettings()
-    const [isSpeaking, setIsSpeaking] = useState(false)
+// memo: while an answer streams, only that message re-renders (not the whole thread)
+export const MessageBubble = memo(function MessageBubble({ message, isLast, onRetry }: MessageBubbleProps) {
+    if (message.role === 'user') {
+        return (
+            <div className="flex justify-end px-4 pt-6">
+                <p className="reading max-w-[85%] whitespace-pre-wrap rounded-[1.25rem] rounded-br-md bg-sunk px-4 py-2.5 text-ink">
+                    {message.content}
+                </p>
+            </div>
+        )
+    }
+    return <AssistantMessage message={message} isLast={isLast} onRetry={onRetry} />
+})
+
+function AssistantMessage({ message, isLast, onRetry }: MessageBubbleProps) {
+    const media = useMedia()
+    // Most relevant first, so the longest beam is always the top one
+    const sources = useMemo(
+        () => [...(message.sources ?? [])].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)),
+        [message.sources]
+    )
+    // An answer that streams in this session gets the beam animation and auto-play
+    const [fresh] = useState(() => !!message.isStreaming)
+    const [openLabel, setOpenLabel] = useState<string | null>(null)
+    const wallRef = useRef<HTMLDivElement>(null)
+    const knownLabels = useMemo(() => new Set(sources.map(sourceLabel)), [sources])
+    const done = !message.isStreaming
+    const speaking = media.now?.kind === 'speech' && media.now.id === message.id
+
+    // Once complete, open the first passage the answer actually cites (the top-scored one if none is cited)
+    const leadLabel = useMemo(() => {
+        if (!done || sources.length === 0) return null
+        return citedLabels(message.content).find(l => knownLabels.has(l)) ?? sourceLabel(sources[0])
+    }, [done, sources, knownLabels, message.content])
 
     useEffect(() => {
-        return () => {
-            if (isSpeaking) {
-                window.speechSynthesis.cancel();
-            }
-        };
-    }, [isSpeaking]);
+        if (leadLabel && openLabel === null) setOpenLabel(leadLabel)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [leadLabel])
 
-    const toggleSpeech = () => {
-        if (isSpeaking) {
-            window.speechSynthesis.cancel();
-            setIsSpeaking(false);
-        } else {
-            // Cancel any ongoing speech
-            window.speechSynthesis.cancel();
+    const openCitation = useCallback((label: string) => {
+        setOpenLabel(label)
+        requestAnimationFrame(() => {
+            // Scroll the thread only: scrollIntoView would also move the page and push the header away
+            const row = wallRef.current?.querySelector<HTMLElement>('[aria-expanded="true"]')
+            const thread = row?.closest('main')
+            if (!row || !thread) return
+            const top = thread.scrollTop + row.getBoundingClientRect().top - thread.getBoundingClientRect().top - 8
+            thread.scrollTo({ top, behavior: 'smooth' })
+        })
+    }, [])
 
-            const utterance = new SpeechSynthesisUtterance(message.content);
-            utterance.lang = 'fr-FR';
-            utterance.rate = 1.0;
-            utterance.pitch = 1.0;
-
-            utterance.onend = () => setIsSpeaking(false);
-            utterance.onerror = () => setIsSpeaking(false);
-
-            window.speechSynthesis.speak(utterance);
-            setIsSpeaking(true);
-        }
-    };
+    const status = !done
+        ? (sources.length === 0 ? 'Recherche des passages…'
+            : message.content ? 'Rédaction de la réponse…'
+                : `${sources.length} ${sources.length > 1 ? 'passages trouvés' : 'passage trouvé'}, rédaction…`)
+        : null
 
     return (
-        <div className={`flex w-full animate-fade-in-up ${isUser ? 'justify-end py-3' : 'justify-start py-5'}`}>
-            {isUser ? (
-                // ── USER MESSAGE ──
-                <div className="bg-[#f4f4f4] dark:bg-[#2f2f2f] text-stone-900 dark:text-gray-100 px-5 py-2.5 rounded-3xl max-w-[85%] md:max-w-[75%] text-[15px] leading-relaxed">
-                    {message.content}
+        <article aria-busy={!done} aria-label="Réponse" className="px-4 pt-5">
+            {/* One fixed-height row: progress while streaming, then the read-aloud action — nothing jumps */}
+            <div className="flex min-h-11 items-center" aria-live="polite">
+                {status ? (
+                    <p className="flex items-center gap-2.5 text-[0.9375rem] text-ink-3">
+                        <span aria-hidden="true" className="flex flex-col gap-[3px]">
+                            {[14, 10, 6].map((w, i) => (
+                                <span key={w} className="block h-[3px] animate-breathe rounded-r-sm bg-ronier" style={{ width: w, animationDelay: `${i * 180}ms` }} />
+                            ))}
+                        </span>
+                        {status}
+                    </p>
+                ) : message.content && !message.error && media.speechSupported ? (
+                    <button
+                        type="button"
+                        onClick={() => media.toggleSpeech(message.id, speakable(message.content))}
+                        className="press -ml-2 flex h-11 items-center gap-2 rounded-xl px-2 text-[0.9375rem] font-semibold text-ink-2 hover:bg-sunk"
+                    >
+                        {speaking ? <Square aria-hidden="true" size={16} /> : <Volume2 aria-hidden="true" size={18} />}
+                        {speaking ? 'Arrêter la lecture' : 'Écouter la réponse'}
+                    </button>
+                ) : null}
+            </div>
+
+            {message.content && (
+                <div className="prose-answer">
+                    <Suspense fallback={<p className="whitespace-pre-wrap">{message.content}</p>}>
+                        <Markdown knownLabels={knownLabels} onCitation={done ? openCitation : undefined}>
+                            {message.content}
+                        </Markdown>
+                    </Suspense>
                 </div>
-            ) : (
-                // ── ASSISTANT MESSAGE ──
-                <div className="flex gap-4 w-full max-w-3xl mx-auto px-4 md:px-0">
-                    {/* Avatar */}
-                    <div className="w-[30px] h-[30px] rounded-full flex items-center justify-center shrink-0 border border-stone-200 dark:border-stone-700/50 bg-white dark:bg-[#10a37f]/10 mt-1 shadow-sm">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#10a37f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-                        </svg>
-                    </div>
+            )}
 
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                        {/* TTS Action Header */}
-                        {!message.isStreaming && message.content && (
-                            <div className="flex justify-end mb-1">
-                                <button
-                                    onClick={toggleSpeech}
-                                    className="text-[13px] flex items-center gap-1.5 px-2 py-1 rounded text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 transition-colors"
-                                    title="Écouter l'explication"
-                                >
-                                    {isSpeaking ? (
-                                        <>
-                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                            <span>Stop</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M17.657 6.343a8 8 0 010 11.314M10.5 20.25L4.5 15.75H2.25V8.25H4.5l6-4.5v16.5z" />
-                                            </svg>
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        )}
-
-                        {/* Markdown Content */}
-                        <div className="prose-chat text-[15px] leading-[1.6] text-stone-800 dark:text-gray-200">
-                            {message.content ? (
-                                <Suspense fallback={<p className="whitespace-pre-wrap">{message.content}</p>}>
-                                    <Markdown>{message.content}</Markdown>
-                                </Suspense>
-                            ) : message.isStreaming ? (
-                                // Loading skeleton
-                                <div className="space-y-3 animate-pulse">
-                                    <div className="h-3 bg-stone-200 dark:bg-[#2f2f2f] rounded w-3/4" />
-                                    <div className="h-3 bg-stone-200 dark:bg-[#2f2f2f] rounded w-1/2" />
-                                    <div className="h-3 bg-stone-200 dark:bg-[#2f2f2f] rounded w-5/6" />
-                                </div>
-                            ) : null}
-
-                            {/* Streaming cursor */}
-                            {message.isStreaming && message.content && (
-                                <span className="inline-block w-2.5 h-4 bg-stone-400 dark:bg-stone-500 rounded-sm ml-1 animate-pulse align-middle" />
-                            )}
-                        </div>
-
-                        {/* Sources */}
-                        {message.sources && message.sources.length > 0 && !message.isStreaming && (
-                            <div className="mt-5 space-y-3">
-                                <p className="text-[12px] font-semibold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5">
-                                    Sources
-                                </p>
-                                {message.sources.map((src, i) => (
-                                    <QuranVerse
-                                        key={i}
-                                        verse={src}
-                                        autoPlayTrigger={autoPlay && i === 0 && src.source_type !== 'Hadith'}
-                                    />
-                                ))}
-                            </div>
+            {message.error && (
+                <div role="alert" className="mt-3 flex items-start gap-3 rounded-2xl bg-danger/10 px-4 py-3 text-ink">
+                    <CircleAlert aria-hidden="true" size={20} className="mt-0.5 shrink-0 text-danger" />
+                    <div className="min-w-0 flex-1">
+                        <p className="reading">{message.error}</p>
+                        {isLast && (
+                            <button type="button" onClick={onRetry} className="press mt-2 flex h-11 items-center gap-2 rounded-xl bg-ink px-4 font-semibold text-ground">
+                                <RotateCcw aria-hidden="true" size={16} />
+                                Réessayer
+                            </button>
                         )}
                     </div>
                 </div>
             )}
-        </div>
+
+            {done && sources.length > 0 && (
+                <div ref={wallRef}>
+                    <SourceWall
+                        messageId={message.id}
+                        sources={sources}
+                        openLabel={openLabel}
+                        onOpen={setOpenLabel}
+                        fresh={fresh}
+                        leadLabel={leadLabel}
+                    />
+                </div>
+            )}
+        </article>
     )
-})
+}

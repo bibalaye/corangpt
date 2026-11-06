@@ -1,111 +1,150 @@
-import { useState, useRef, useEffect } from 'react'
-import { Sidebar } from './Sidebar'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Menu, SquarePen } from 'lucide-react'
+import type { useChat } from '../hooks/useChat'
+import { useAuth } from '../hooks/useAuth'
+import { useMedia } from '../hooks/useMedia'
 import { MessageBubble } from './MessageBubble'
 import { ChatInput } from './ChatInput'
 import { WelcomeScreen } from './WelcomeScreen'
-import type { useChat } from '../hooks/useChat'
+import { ConversationPanel } from './Sidebar'
+import { SettingsSheet } from './SettingsSheet'
+import { IconButton } from './IconButton'
+import { Sheet } from './Sheet'
 
 interface ChatLayoutProps {
     chat: ReturnType<typeof useChat>
-    theme: 'light' | 'dark'
-    onToggleTheme: () => void
+    onSignIn: () => void
+    onSignOut: () => void
+    onShowLimit: () => void
 }
 
 /**
- * Main layout — sidebar + chat area.
- * Handles mobile sidebar toggle and message scrolling.
+ * Keep the shell exactly as tall as what is visible: when the iPhone keyboard
+ * opens, the question field stays right above it and the header stays put.
  */
-export function ChatLayout({ chat, theme, onToggleTheme }: ChatLayoutProps) {
-    const [sidebarOpen, setSidebarOpen] = useState(false)
-    const scrollRef = useRef<HTMLDivElement>(null)
-    const messageCount = chat.currentMessages.length
-    const hasMessages = messageCount > 0
-    const lastMessage = chat.currentMessages[messageCount - 1]
+function useVisibleHeight() {
+    useEffect(() => {
+        const vv = window.visualViewport
+        if (!vv) return
+        const update = () => {
+            document.documentElement.style.setProperty('--app-height', `${Math.round(vv.height)}px`)
+            if (vv.offsetTop > 0) window.scrollTo(0, 0)
+        }
+        update()
+        vv.addEventListener('resize', update)
+        vv.addEventListener('scroll', update)
+        return () => {
+            vv.removeEventListener('resize', update)
+            vv.removeEventListener('scroll', update)
+        }
+    }, [])
+}
 
-    // New message or conversation switch: scroll to the bottom.
+export function ChatLayout({ chat, onSignIn, onSignOut, onShowLimit }: ChatLayoutProps) {
+    const { user } = useAuth()
+    const media = useMedia()
+    const [drawerOpen, setDrawerOpen] = useState(false)
+    const [settingsOpen, setSettingsOpen] = useState(false)
+    const scrollRef = useRef<HTMLElement>(null)
+    const messages = chat.currentMessages
+    const last = messages[messages.length - 1]
+    useVisibleHeight()
+
+    // New message or conversation switch: go to the end of the thread
     useEffect(() => {
         const el = scrollRef.current
         el?.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
-    }, [messageCount, chat.currentId])
+    }, [messages.length, chat.currentId])
 
-    // While an answer streams, follow it — unless the user scrolled up to read.
+    // While an answer streams, follow it — unless the reader scrolled up
     useEffect(() => {
         const el = scrollRef.current
-        if (!el) return
-        if (el.scrollHeight - el.scrollTop - el.clientHeight < 160) {
+        if (el && chat.isStreaming && el.scrollHeight - el.scrollTop - el.clientHeight < 160) {
             el.scrollTo({ top: el.scrollHeight, behavior: 'instant' })
         }
-    }, [lastMessage?.content, lastMessage?.sources])
+    }, [last?.content, last?.sources, chat.isStreaming])
+
+    const send = useCallback((text: string) => {
+        media.unlock() // inside the tap, so iOS lets the recitation auto-play later
+        chat.sendMessage(text)
+    }, [media, chat])
+
+    const panel = (onClose?: () => void) => (
+        <ConversationPanel
+            titleId={onClose ? 'drawer-title' : 'sidebar-title'}
+            conversations={chat.conversations}
+            currentId={chat.currentId}
+            user={user}
+            onNewChat={() => { chat.newChat(); setDrawerOpen(false) }}
+            onSelect={id => { chat.selectConversation(id); setDrawerOpen(false) }}
+            onDelete={chat.deleteConversation}
+            onOpenSettings={() => { setDrawerOpen(false); setSettingsOpen(true) }}
+            onSignIn={() => { setDrawerOpen(false); onSignIn() }}
+            onClose={onClose}
+        />
+    )
 
     return (
-        <div className="flex h-screen w-screen bg-white dark:bg-[#202123] text-stone-900 dark:text-stone-100 transition-colors duration-300 overflow-hidden font-sans">
-            {/* Mobile overlay */}
-            {sidebarOpen && (
-                <div
-                    className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm md:hidden animate-fade-in"
-                    onClick={() => setSidebarOpen(false)}
-                />
-            )}
+        <div className="flex h-[var(--app-height,100dvh)] overflow-hidden bg-ground">
+            {/* Wide screens: the conversation list stays open beside the thread */}
+            <aside aria-labelledby="sidebar-title" className="hidden w-80 shrink-0 border-r border-line bg-ground lg:block">
+                {panel()}
+            </aside>
 
-            {/* Sidebar */}
-            <Sidebar
-                conversations={chat.conversations}
-                currentId={chat.currentId}
-                isOpen={sidebarOpen}
-                theme={theme}
-                onNewChat={() => { chat.newChat(); setSidebarOpen(false) }}
-                onSelect={(id) => { chat.selectConversation(id); setSidebarOpen(false) }}
-                onDelete={chat.deleteConversation}
-                onToggleTheme={onToggleTheme}
-            />
-
-            {/* Main chat area */}
-            <main className="flex-1 flex flex-col min-w-0 relative">
-                {/* Header - Mobile Only */}
-                <header className="md:hidden flex items-center px-4 py-3 border-b border-stone-200 dark:border-stone-800 bg-white dark:bg-[#202123] z-10 sticky top-0">
-                    {/* Hamburger */}
-                    <button
-                        onClick={() => setSidebarOpen(true)}
-                        className="mr-3 p-1.5 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300 transition-colors"
-                        aria-label="Menu"
-                    >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M3 12h18M3 18h18" />
-                        </svg>
-                    </button>
-
-                    <div className="flex-1 text-center font-medium text-[15px] text-stone-800 dark:text-stone-200">
-                        IA Coran
+            <div className="flex min-w-0 flex-1 flex-col">
+                <header className="shrink-0 bg-shell pl-safe-l pr-safe-r pt-safe-t text-on-shell">
+                    <div className="mx-auto flex h-14 max-w-2xl items-center gap-1 px-1.5">
+                        <IconButton label="Vos questions" tone="shell" onClick={() => setDrawerOpen(true)} className="lg:invisible">
+                            <Menu aria-hidden="true" size={24} />
+                        </IconButton>
+                        <div className="flex flex-1 items-center justify-center gap-2.5">
+                            <img src="/mark.svg" alt="" className="h-7 w-7 rounded-lg" />
+                            <span className="text-[1.0625rem] font-semibold tracking-[-0.01em]">IA Coran</span>
+                        </div>
+                        <IconButton label="Nouvelle question" tone="shell" onClick={chat.newChat} className="lg:invisible">
+                            <SquarePen aria-hidden="true" size={22} />
+                        </IconButton>
                     </div>
-                    {/* Empty div for flex balance */}
-                    <div className="w-8"></div>
                 </header>
 
-                {/* Messages */}
-                <div ref={scrollRef} className="flex-1 overflow-y-auto" id="messages-scroll">
-                    {hasMessages ? (
-                        <div className="max-w-3xl mx-auto px-4 md:px-6 py-6 space-y-1">
-                            {chat.currentMessages.map(msg => (
-                                <MessageBubble key={msg.id} message={msg} />
-                            ))}
+                <main ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                    <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col">
+                        {messages.length > 0 ? (
+                            <div className="pb-6">
+                                <h1 className="sr-only">{chat.currentConversation.title}</h1>
+                                {messages.map((msg, i) => (
+                                    <MessageBubble key={msg.id} message={msg} isLast={i === messages.length - 1} onRetry={chat.retryLast} />
+                                ))}
+                            </div>
+                        ) : (
+                            <WelcomeScreen onSuggestion={send} />
+                        )}
+                    </div>
+                </main>
 
-                        </div>
-                    ) : (
-                        <WelcomeScreen onSuggestion={chat.sendMessage} />
-                    )}
-                </div>
-
-                {/* Input area */}
                 <ChatInput
-                    onSend={chat.sendMessage}
+                    onSend={send}
                     onStop={chat.stopGeneration}
                     isStreaming={chat.isStreaming}
                     isLimitReached={chat.isLimitReached}
                     resetTime={chat.nextResetTime}
+                    onLimitTap={onShowLimit}
                     sourceFilter={chat.sourceFilter}
                     onSourceFilterChange={chat.setSourceFilter}
                 />
-            </main>
+            </div>
+
+            <Sheet open={drawerOpen} onClose={() => setDrawerOpen(false)} labelledBy="drawer-title" variant="drawer">
+                {panel(() => setDrawerOpen(false))}
+            </Sheet>
+
+            <SettingsSheet
+                open={settingsOpen}
+                onClose={() => setSettingsOpen(false)}
+                user={user}
+                onSignIn={onSignIn}
+                onSignOut={onSignOut}
+            />
         </div>
     )
 }

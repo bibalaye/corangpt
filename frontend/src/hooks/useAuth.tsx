@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, createContext, useContext } from 'react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -32,19 +32,16 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
-    const [token, setToken] = useState<string | null>(null);
-
-    useEffect(() => {
-        const storedToken = localStorage.getItem('token');
-        const storedUser = localStorage.getItem('user');
-
-        if (storedToken && storedUser) {
-            setToken(storedToken);
-            setUser(JSON.parse(storedUser));
-            // Ideally we'd also verify the token with the backend here.
-        }
-    }, []);
+    // Read the saved session synchronously: the first render already knows who is signed in
+    const [token, setToken] = useState<string | null>(() => {
+        try { return localStorage.getItem('token') } catch { return null }
+    });
+    const [user, setUser] = useState<User | null>(() => {
+        try {
+            const stored = localStorage.getItem('user');
+            return stored && localStorage.getItem('token') ? JSON.parse(stored) : null
+        } catch { return null }
+    });
 
     const login = (newToken: string, newUser: User) => {
         setToken(newToken);

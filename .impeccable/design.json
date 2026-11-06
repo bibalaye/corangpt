@@ -1,0 +1,841 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-06T17:41:35+00:00",
+  "title": "Design System: IA Coran",
+  "extensions": {
+    "colorMeta": {
+      "shell": {
+        "role": "primary",
+        "displayName": "Laterite Shell",
+        "canonical": "rgb(142 58 28)",
+        "cssVar": "--shell on :root",
+        "tonalRamp": [
+          "#1D0200",
+          "#421404",
+          "#6A2D18",
+          "#95472D",
+          "#BB694D",
+          "#D89179",
+          "#F5B9A5",
+          "#FFE2D3"
+        ]
+      },
+      "shell-deep": {
+        "role": "primary",
+        "displayName": "Fired Laterite",
+        "canonical": "rgb(110 42 18)",
+        "cssVar": "--shell-deep on :root",
+        "tonalRamp": [
+          "#1B0300",
+          "#3E180B",
+          "#653120",
+          "#8E4C37",
+          "#B36E57",
+          "#D19480",
+          "#EFBCAB",
+          "#FFE4D7"
+        ]
+      },
+      "on-shell": {
+        "role": "primary",
+        "displayName": "Shell Kaolin",
+        "canonical": "rgb(247 235 221)",
+        "cssVar": "--on-shell on :root",
+        "tonalRamp": [
+          "#0E0A07",
+          "#29241E",
+          "#484138",
+          "#696054",
+          "#8A8175",
+          "#ACA399",
+          "#CFC8BF",
+          "#F3EDE7"
+        ]
+      },
+      "on-shell-2": {
+        "role": "primary",
+        "displayName": "Shell Dust",
+        "canonical": "rgb(235 201 179)",
+        "cssVar": "--on-shell-2 on :root",
+        "tonalRamp": [
+          "#130803",
+          "#312117",
+          "#523D2F",
+          "#765B49",
+          "#987C69",
+          "#B89F8F",
+          "#DAC4B7",
+          "#FBEBE0"
+        ]
+      },
+      "quran": {
+        "role": "secondary",
+        "displayName": "Logo Green",
+        "canonical": "rgb(30 92 58)",
+        "cssVar": "--quran on :root",
+        "tonalRamp": [
+          "#001005",
+          "#0A2C1A",
+          "#214C33",
+          "#386F4E",
+          "#5A916E",
+          "#84B294",
+          "#AFD4BB",
+          "#DAF7E3"
+        ]
+      },
+      "on-quran": {
+        "role": "secondary",
+        "displayName": "On Logo Green",
+        "canonical": "rgb(247 235 221)",
+        "cssVar": "--on-quran on :root",
+        "tonalRamp": [
+          "#0E0A07",
+          "#29241E",
+          "#484138",
+          "#696054",
+          "#8A8175",
+          "#ACA399",
+          "#CFC8BF",
+          "#F3EDE7"
+        ]
+      },
+      "hadith": {
+        "role": "secondary",
+        "displayName": "Sahel Ochre",
+        "canonical": "rgb(138 90 18)",
+        "cssVar": "--hadith on :root",
+        "tonalRamp": [
+          "#170700",
+          "#381E00",
+          "#5C3904",
+          "#835718",
+          "#A6783E",
+          "#C59D6D",
+          "#E4C39C",
+          "#FFEACC"
+        ]
+      },
+      "ronier": {
+        "role": "tertiary",
+        "displayName": "Rônier Wood",
+        "canonical": "rgb(74 42 22)",
+        "cssVar": "--ronier on :root",
+        "tonalRamp": [
+          "#140803",
+          "#332015",
+          "#553B2C",
+          "#7A5945",
+          "#9D7A66",
+          "#BC9E8C",
+          "#DDC3B5",
+          "#FEEADF"
+        ]
+      },
+      "clay": {
+        "role": "tertiary",
+        "displayName": "Clay End-Grain",
+        "canonical": "rgb(201 138 91)",
+        "cssVar": "--clay on :root",
+        "tonalRamp": [
+          "#190500",
+          "#3B1C02",
+          "#603613",
+          "#885228",
+          "#AC7449",
+          "#CA9976",
+          "#E9C0A3",
+          "#FFE7D1"
+        ]
+      },
+      "danger": {
+        "role": "neutral",
+        "displayName": "Danger",
+        "canonical": "rgb(163 38 27)",
+        "cssVar": "--danger on :root",
+        "tonalRamp": [
+          "#230000",
+          "#4B0502",
+          "#771D14",
+          "#A63529",
+          "#CD594A",
+          "#E98576",
+          "#FFB0A3",
+          "#FFDCD1"
+        ]
+      },
+      "ground": {
+        "role": "neutral",
+        "displayName": "Kaolin Ground",
+        "canonical": "rgb(242 230 216)",
+        "cssVar": "--ground on :root",
+        "tonalRamp": [
+          "#0E0A07",
+          "#29241E",
+          "#484138",
+          "#696054",
+          "#8B8175",
+          "#ACA399",
+          "#CFC8BF",
+          "#F3EDE7"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Fresh Wash",
+        "canonical": "rgb(251 245 236)",
+        "cssVar": "--surface on :root",
+        "tonalRamp": [
+          "#0D0B08",
+          "#272521",
+          "#45413C",
+          "#656059",
+          "#86827A",
+          "#A9A49E",
+          "#CCC9C3",
+          "#F1EEEA"
+        ]
+      },
+      "sunk": {
+        "role": "neutral",
+        "displayName": "Sunk Plaster",
+        "canonical": "rgb(232 214 193)",
+        "cssVar": "--sunk on :root",
+        "tonalRamp": [
+          "#0F0A05",
+          "#2C231A",
+          "#4B4033",
+          "#6D5F4E",
+          "#8F806E",
+          "#B0A393",
+          "#D2C7BA",
+          "#F6EDE3"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Seam",
+        "canonical": "rgb(217 194 168)",
+        "cssVar": "--line on :root",
+        "tonalRamp": [
+          "#110A03",
+          "#2E2316",
+          "#4E3F2E",
+          "#705E48",
+          "#927F68",
+          "#B3A28F",
+          "#D5C7B7",
+          "#F8EDE0"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "rgb(38 20 12)",
+        "cssVar": "--ink on :root",
+        "tonalRamp": [
+          "#110906",
+          "#2E221D",
+          "#4E3E37",
+          "#715C53",
+          "#937D73",
+          "#B4A098",
+          "#D5C5BE",
+          "#F8EBE6"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Ink 2",
+        "canonical": "rgb(99 67 49)",
+        "cssVar": "--ink-2 on :root",
+        "tonalRamp": [
+          "#130803",
+          "#322016",
+          "#543C2E",
+          "#785948",
+          "#9B7A68",
+          "#BB9E8F",
+          "#DCC4B7",
+          "#FDEAE0"
+        ]
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Ink 3",
+        "canonical": "rgb(125 90 68)",
+        "cssVar": "--ink-3 on :root",
+        "tonalRamp": [
+          "#140803",
+          "#332014",
+          "#553C2C",
+          "#795945",
+          "#9C7A65",
+          "#BC9E8C",
+          "#DDC3B4",
+          "#FEEADE"
+        ]
+      },
+      "shell-night": {
+        "role": "primary",
+        "displayName": "Laterite Shell (Night)",
+        "canonical": "rgb(62 27 14)",
+        "cssVar": "--shell on .dark",
+        "tonalRamp": [
+          "#150704",
+          "#341F17",
+          "#573A2F",
+          "#7D5749",
+          "#A07869",
+          "#BF9C90",
+          "#DFC2B7",
+          "#FFE9E1"
+        ]
+      },
+      "shell-deep-night": {
+        "role": "primary",
+        "displayName": "Fired Laterite (Night)",
+        "canonical": "rgb(42 18 9)",
+        "cssVar": "--shell-deep on .dark",
+        "tonalRamp": [
+          "#120805",
+          "#30211B",
+          "#523C34",
+          "#765A50",
+          "#987B70",
+          "#B89F95",
+          "#D9C4BC",
+          "#FBEAE4"
+        ]
+      },
+      "on-shell-night": {
+        "role": "primary",
+        "displayName": "Shell Kaolin (Night)",
+        "canonical": "rgb(242 228 210)",
+        "cssVar": "--on-shell on .dark",
+        "tonalRamp": [
+          "#0F0A06",
+          "#2A241C",
+          "#494035",
+          "#6A5F51",
+          "#8C8071",
+          "#ADA396",
+          "#D0C8BD",
+          "#F4EDE5"
+        ]
+      },
+      "on-shell-2-night": {
+        "role": "primary",
+        "displayName": "Shell Dust (Night)",
+        "canonical": "rgb(212 178 154)",
+        "cssVar": "--on-shell-2 on .dark",
+        "tonalRamp": [
+          "#130803",
+          "#312115",
+          "#523D2D",
+          "#765B47",
+          "#997C67",
+          "#B99F8D",
+          "#DAC4B6",
+          "#FCEBDF"
+        ]
+      },
+      "quran-night": {
+        "role": "secondary",
+        "displayName": "Logo Green (Night)",
+        "canonical": "rgb(108 192 147)",
+        "cssVar": "--quran on .dark",
+        "tonalRamp": [
+          "#001104",
+          "#002E19",
+          "#0B4F32",
+          "#22724C",
+          "#48946D",
+          "#77B592",
+          "#A5D7BA",
+          "#D4F9E3"
+        ]
+      },
+      "on-quran-night": {
+        "role": "secondary",
+        "displayName": "On Logo Green (Night)",
+        "canonical": "rgb(23 13 8)",
+        "cssVar": "--on-quran on .dark",
+        "tonalRamp": [
+          "#0F0A08",
+          "#2A2320",
+          "#49403B",
+          "#6B5E58",
+          "#8C7F79",
+          "#AEA29D",
+          "#D0C7C2",
+          "#F4EDE9"
+        ]
+      },
+      "hadith-night": {
+        "role": "secondary",
+        "displayName": "Sahel Ochre (Night)",
+        "canonical": "rgb(224 174 94)",
+        "cssVar": "--hadith on .dark",
+        "tonalRamp": [
+          "#170700",
+          "#371F00",
+          "#5B3A00",
+          "#825800",
+          "#A5792F",
+          "#C49E64",
+          "#E3C495",
+          "#FFEBC7"
+        ]
+      },
+      "ronier-night": {
+        "role": "tertiary",
+        "displayName": "Rônier Wood (Night)",
+        "canonical": "rgb(155 106 69)",
+        "cssVar": "--ronier on .dark",
+        "tonalRamp": [
+          "#170600",
+          "#371E09",
+          "#5B391E",
+          "#825634",
+          "#A57755",
+          "#C49C7F",
+          "#E3C2AA",
+          "#FFE9D6"
+        ]
+      },
+      "clay-night": {
+        "role": "tertiary",
+        "displayName": "Clay End-Grain (Night)",
+        "canonical": "rgb(217 165 122)",
+        "cssVar": "--clay on .dark",
+        "tonalRamp": [
+          "#170700",
+          "#371E07",
+          "#5B391B",
+          "#815631",
+          "#A57751",
+          "#C49C7C",
+          "#E3C2A8",
+          "#FFE9D5"
+        ]
+      },
+      "danger-night": {
+        "role": "neutral",
+        "displayName": "Danger (Night)",
+        "canonical": "rgb(240 138 126)",
+        "cssVar": "--danger on .dark",
+        "tonalRamp": [
+          "#1E0001",
+          "#44110E",
+          "#6D2923",
+          "#98433B",
+          "#BE655B",
+          "#DC8D83",
+          "#F8B6AD",
+          "#FFE0D9"
+        ]
+      },
+      "ground-night": {
+        "role": "neutral",
+        "displayName": "Kaolin Ground (Night)",
+        "canonical": "rgb(23 13 8)",
+        "cssVar": "--ground on .dark",
+        "tonalRamp": [
+          "#0F0A08",
+          "#2A2320",
+          "#49403B",
+          "#6B5E58",
+          "#8C7F79",
+          "#AEA29D",
+          "#D0C7C2",
+          "#F4EDE9"
+        ]
+      },
+      "surface-night": {
+        "role": "neutral",
+        "displayName": "Fresh Wash (Night)",
+        "canonical": "rgb(36 21 13)",
+        "cssVar": "--surface on .dark",
+        "tonalRamp": [
+          "#100907",
+          "#2D231D",
+          "#4C3F38",
+          "#6E5D54",
+          "#907E75",
+          "#B1A199",
+          "#D3C6BF",
+          "#F7ECE7"
+        ]
+      },
+      "sunk-night": {
+        "role": "neutral",
+        "displayName": "Sunk Plaster (Night)",
+        "canonical": "rgb(47 28 18)",
+        "cssVar": "--sunk on .dark",
+        "tonalRamp": [
+          "#110906",
+          "#2E221C",
+          "#4E3E36",
+          "#715C51",
+          "#937D72",
+          "#B4A097",
+          "#D6C5BD",
+          "#F8ECE5"
+        ]
+      },
+      "line-night": {
+        "role": "neutral",
+        "displayName": "Seam (Night)",
+        "canonical": "rgb(62 39 25)",
+        "cssVar": "--line on .dark",
+        "tonalRamp": [
+          "#120905",
+          "#2F2219",
+          "#503D32",
+          "#745B4D",
+          "#967C6D",
+          "#B6A093",
+          "#D8C5BA",
+          "#FAEBE3"
+        ]
+      },
+      "ink-night": {
+        "role": "neutral",
+        "displayName": "Ink (Night)",
+        "canonical": "rgb(242 228 210)",
+        "cssVar": "--ink on .dark",
+        "tonalRamp": [
+          "#0F0A06",
+          "#2A241C",
+          "#494035",
+          "#6A5F51",
+          "#8C8071",
+          "#ADA396",
+          "#D0C8BD",
+          "#F4EDE5"
+        ]
+      },
+      "ink-2-night": {
+        "role": "neutral",
+        "displayName": "Ink 2 (Night)",
+        "canonical": "rgb(201 173 148)",
+        "cssVar": "--ink-2 on .dark",
+        "tonalRamp": [
+          "#120903",
+          "#2F2216",
+          "#503E2D",
+          "#735C47",
+          "#967D67",
+          "#B6A18E",
+          "#D7C6B6",
+          "#FAECE0"
+        ]
+      },
+      "ink-3-night": {
+        "role": "neutral",
+        "displayName": "Ink 3 (Night)",
+        "canonical": "rgb(168 137 111)",
+        "cssVar": "--ink-3 on .dark",
+        "tonalRamp": [
+          "#130902",
+          "#312114",
+          "#523D2B",
+          "#765B44",
+          "#987C65",
+          "#B8A08B",
+          "#D9C5B4",
+          "#FBEBDE"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display-arabic": {
+        "displayName": "Display Arabic",
+        "purpose": "The Arabic greeting on the welcome screen; the largest type in the system."
+      },
+      "reading-arabic": {
+        "displayName": "Reading Arabic",
+        "purpose": "Verse and hadith text, right-to-left, scaled by the in-app text size."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Welcome line under the greeting and sheet titles."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "The IA Coran wordmark in the header and the drawer title."
+      },
+      "reading": {
+        "displayName": "Reading",
+        "purpose": "Answers, translations and the question bubble, scaled by --text-scale."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Source details, conversation rows, secondary actions."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Sentence-case section headings: passage count above the wall, date groups in the drawer."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Dock disclaimer and settings footer."
+      }
+    },
+    "fontFaces": [
+      {
+        "family": "Harmattan",
+        "src": "/fonts/harmattan-arabic-400.woff2",
+        "weight": 400,
+        "unicodeRange": "U+0600-06FF, U+0750-077F, U+0870-08FF, U+200C-200E, U+FB50-FDFF, U+FE70-FEFC",
+        "purpose": "All Arabic text."
+      },
+      {
+        "family": "Salawat",
+        "src": "/fonts/amiri-salawat.woff2",
+        "weight": 400,
+        "unicodeRange": "U+FDFA",
+        "purpose": "Amiri subset for the salawat ligature only; first in both stacks."
+      }
+    ],
+    "shadows": [
+      {
+        "name": "thumb-lift",
+        "value": "0 1px 3px rgb(38 20 12 / 0.12)",
+        "purpose": "Selected thumb of segmented controls inside sheets."
+      },
+      {
+        "name": "knob-lift",
+        "value": "0 1px 3px rgb(38 20 12 / 0.25)",
+        "purpose": "Knob of the auto-recitation toggle."
+      },
+      {
+        "name": "night-sheet-edge",
+        "value": "0 -1px 0 rgb(var(--line))",
+        "purpose": "Top edge of a sheet at night."
+      }
+    ],
+    "overlays": [
+      {
+        "name": "dialog-backdrop",
+        "value": "rgb(23 13 8 / 0.5)",
+        "purpose": "Dim behind native dialogs."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Every entrance and the press response."
+      },
+      {
+        "name": "press",
+        "value": "scale(0.97) over 120ms ease-out",
+        "purpose": "Instant touch feedback on every pressable."
+      },
+      {
+        "name": "extrude",
+        "value": "scaleX(0) to scaleX(1) from the left, 520ms ease-out, staggered 55ms",
+        "purpose": "Toron beams pushed out of the wall on a fresh answer."
+      },
+      {
+        "name": "rise",
+        "value": "translateY(6px) and fade in, 360ms ease-out",
+        "purpose": "Opened verse card."
+      },
+      {
+        "name": "sheet-up",
+        "value": "translateY(24px) and fade in, 360ms ease-out",
+        "purpose": "Sheets entering."
+      },
+      {
+        "name": "drawer-in",
+        "value": "translateX(-100%) to 0, 320ms ease-out",
+        "purpose": "Conversation drawer entering from the left."
+      },
+      {
+        "name": "breathe",
+        "value": "opacity 0.35 to 1, 1.4s ease-in-out infinite, staggered 180ms",
+        "purpose": "Three-bar streaming indicator."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation and transition durations 1ms",
+        "purpose": "prefers-reduced-motion: reduce."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px",
+        "purpose": "Sheets become centred dialogs; the sources wall returns into the column."
+      },
+      {
+        "name": "lg",
+        "value": "1024px",
+        "purpose": "Conversation panel becomes a persistent 20rem sidebar."
+      }
+    ],
+    "themes": {
+      "mechanism": "Class .dark on the root; tokens are RGB channels so alpha utilities stay bound to the palette.",
+      "themeColor": {
+        "light": "#8E3A1C",
+        "dark": "#3E1B0E"
+      }
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Logo-green 48px action for the main step in a sheet or the drawer (Nouvelle question, Se connecter).",
+      "html": "<button class=\"ds-btn-primary\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7\"/><path d=\"M18.4 2.6a2.1 2.1 0 1 1 3 3L12 15l-4 1 1-4Z\"/></svg>Nouvelle question</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 48px; border: 0; border-radius: 16px; background: rgb(var(--quran)); color: rgb(var(--on-quran)); font: 600 1rem/1.5 Salawat, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, Roboto, sans-serif; cursor: pointer; transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1), background-color 120ms, color 120ms; } .ds-btn-primary:hover { background: rgb(var(--quran) / 0.9); } .ds-btn-primary:active { transform: scale(0.97); } .ds-btn-primary:focus-visible { outline: 2px solid rgb(var(--quran)); outline-offset: 2px; border-radius: 6px; }"
+    },
+    {
+      "name": "Ink Button",
+      "kind": "button",
+      "refersTo": "button-ink",
+      "description": "Neutral solid confirmation in ink with ground text (Compris, Réessayer, sign-in prompts).",
+      "html": "<button class=\"ds-btn-ink\">Compris</button>",
+      "css": ".ds-btn-ink { width: 100%; height: 48px; border: 0; border-radius: 16px; background: rgb(var(--ink)); color: rgb(var(--ground)); font: 600 1rem/1.5 Salawat, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, Roboto, sans-serif; cursor: pointer; transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1), background-color 120ms, color 120ms; } .ds-btn-ink:active { transform: scale(0.97); } .ds-btn-ink:focus-visible { outline: 2px solid rgb(var(--quran)); outline-offset: 2px; border-radius: 6px; }"
+    },
+    {
+      "name": "Recitation Pill",
+      "kind": "button",
+      "refersTo": "button-recite",
+      "description": "Green full-round 44px Écouter control inside an opened verse card.",
+      "html": "<button class=\"ds-recite\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><polygon points=\"6 3 20 12 6 21 6 3\"/></svg><span>Écouter</span></button>",
+      "css": ".ds-recite { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border: 0; border-radius: 9999px; background: rgb(var(--quran)); color: rgb(var(--on-quran)); font: 600 1rem/1.5 Salawat, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, Roboto, sans-serif; cursor: pointer; transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1), background-color 120ms, color 120ms; } .ds-recite:hover { background: rgb(var(--quran) / 0.9); } .ds-recite:active { transform: scale(0.97); } .ds-recite:focus-visible { outline: 2px solid rgb(var(--quran)); outline-offset: 2px; border-radius: 6px; }"
+    },
+    {
+      "name": "Laterite Header",
+      "kind": "nav",
+      "refersTo": "header",
+      "description": "Solid laterite top bar: menu, mark and wordmark, new question, on 44px shell icon buttons.",
+      "html": "<header class=\"ds-header\"><button class=\"ds-icon-shell\" aria-label=\"Vos questions\" title=\"Vos questions\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 6h16M4 12h16M4 18h16\"/></svg></button><div class=\"ds-brand\"><span class=\"ds-mark\" aria-hidden=\"true\"></span><span>IA Coran</span></div><button class=\"ds-icon-shell\" aria-label=\"Nouvelle question\" title=\"Nouvelle question\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7\"/><path d=\"M18.4 2.6a2.1 2.1 0 1 1 3 3L12 15l-4 1 1-4Z\"/></svg></button></header>",
+      "css": ".ds-header { display: flex; align-items: center; gap: 4px; height: 56px; padding: 0 6px; background: rgb(var(--shell)); color: rgb(var(--on-shell)); font-family: Salawat, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, Roboto, sans-serif; } .ds-brand { flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.01em; } .ds-mark { width: 28px; height: 28px; border-radius: 8px; background: rgb(var(--quran)); } .ds-icon-shell { display: inline-grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; color: rgb(var(--on-shell)); cursor: pointer; transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1), background-color 120ms, color 120ms; } .ds-icon-shell:hover, .ds-icon-shell:active { background: rgb(var(--shell-deep)); } .ds-icon-shell:active { transform: scale(0.97); } .ds-icon-shell:focus-visible { outline: 2px solid rgb(var(--quran)); outline-offset: 2px; border-radius: 6px; }"
+    },
+    {
+      "name": "Dock Source Filter",
+      "kind": "chip",
+      "refersTo": "dock-segmented",
+      "description": "Fired-laterite segmented track on the dock (Les deux / Coran / Hadith); the selected segment is a kaolin tile.",
+      "html": "<div class=\"ds-seg\" role=\"radiogroup\" aria-label=\"Sources à consulter\"><button class=\"ds-seg-item\" role=\"radio\" aria-checked=\"true\">Les deux</button><button class=\"ds-seg-item\" role=\"radio\" aria-checked=\"false\">Coran</button><button class=\"ds-seg-item\" role=\"radio\" aria-checked=\"false\">Hadith</button></div>",
+      "css": ".ds-seg { display: flex; padding: 2px; border-radius: 12px; background: rgb(var(--shell-deep)); font-family: Salawat, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, Roboto, sans-serif; } .ds-seg-item { flex: 1; height: 44px; border: 0; border-radius: 10px; background: transparent; color: rgb(var(--on-shell-2)); font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1), background-color 120ms, color 120ms; } .ds-seg-item[aria-checked='true'] { background: rgb(var(--ground)); color: rgb(var(--shell)); } .ds-seg-item:active { transform: scale(0.97); } .ds-seg-item:focus-visible { outline: 2px solid rgb(var(--on-shell)); outline-offset: 2px; }"
+    },
+    {
+      "name": "Composer",
+      "kind": "input",
+      "refersTo": "composer-field",
+      "description": "Kaolin capsule on the laterite dock with the 44px green send disc; send turns sunk when empty.",
+      "html": "<div class=\"ds-dock\"><div class=\"ds-composer\"><textarea class=\"ds-composer-field\" rows=\"1\" placeholder=\"Posez votre question…\" aria-label=\"Votre question\"></textarea><button class=\"ds-send\" aria-label=\"Envoyer la question\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m5 12 7-7 7 7\"/><path d=\"M12 19V5\"/></svg></button></div><p class=\"ds-disclaimer\">L’IA peut se tromper. Vérifiez toujours les références.</p></div>",
+      "css": ".ds-dock { padding: 10px 12px 0; background: rgb(var(--shell)); font-family: Salawat, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, Roboto, sans-serif; } .ds-composer { display: flex; align-items: flex-end; gap: 8px; padding: 4px 4px 4px 16px; border-radius: 24px; background: rgb(var(--ground)); } .ds-composer-field { flex: 1; min-height: 44px; max-height: 136px; padding: 10px 0; border: 0; resize: none; background: transparent; color: rgb(var(--ink)); font: 400 max(1rem, 16px)/1.5rem Salawat, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, Roboto, sans-serif; caret-color: rgb(var(--quran)); } .ds-composer-field::placeholder { color: rgb(var(--ink-3)); } .ds-composer-field:focus { outline: none; } .ds-send { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border: 0; border-radius: 9999px; background: rgb(var(--quran)); color: rgb(var(--on-quran)); cursor: pointer; transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1), background-color 120ms, color 120ms; } .ds-send:disabled { background: rgb(var(--sunk)); color: rgb(var(--ink-3)); } .ds-send:active { transform: scale(0.97); } .ds-send:focus-visible { outline: 2px solid rgb(var(--quran)); outline-offset: 2px; border-radius: 6px; } .ds-disclaimer { margin: 0; padding: 6px 0; text-align: center; font-size: 0.75rem; line-height: 1rem; color: rgb(var(--on-shell-2)); }"
+    },
+    {
+      "name": "Form Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "48px fresh-wash text field with a seam border; focus turns the border green with a 25% green ring.",
+      "html": "<label class=\"ds-field-label\">Adresse e-mail<input class=\"ds-field\" type=\"email\" placeholder=\"vous@exemple.com\"></label>",
+      "css": ".ds-field-label { display: block; color: rgb(var(--ink)); font: 600 0.9375rem/1.5 Salawat, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, Roboto, sans-serif; } .ds-field { display: block; width: 100%; height: 48px; margin-top: 6px; padding: 0 16px; border: 1px solid rgb(var(--line)); border-radius: 12px; background: rgb(var(--surface)); color: rgb(var(--ink)); font: 400 max(1rem, 16px)/1.5 Salawat, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, Roboto, sans-serif; caret-color: rgb(var(--quran)); } .ds-field::placeholder { color: rgb(var(--ink-3)); } .ds-field:focus { outline: none; border-color: rgb(var(--quran)); box-shadow: 0 0 0 2px rgb(var(--quran) / 0.25); }"
+    },
+    {
+      "name": "Source Wall",
+      "kind": "custom",
+      "refersTo": "source-row",
+      "description": "Signature: one 48px row per passage, a rônier toron beam whose length shows relevance, a corpus dot, reference and detail; the open row turns sunk.",
+      "html": "<section class=\"ds-wall\"><h3 class=\"ds-wall-h\">3 passages consultés</h3><ul class=\"ds-wall-list\"><li class=\"ds-wall-li ds-open\"><button class=\"ds-wall-row\" aria-expanded=\"true\"><span class=\"ds-beam\" style=\"width:5rem\" aria-hidden=\"true\"></span><span class=\"ds-dot ds-q\" aria-hidden=\"true\"></span><span class=\"ds-ref\"><b>2:153</b><span class=\"ds-det\">Al-Baqara</span></span><svg class=\"ds-chev\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m6 9 6 6 6-6\"/></svg></button></li><li class=\"ds-wall-li\"><button class=\"ds-wall-row\" aria-expanded=\"false\"><span class=\"ds-beam\" style=\"width:3.4rem\" aria-hidden=\"true\"></span><span class=\"ds-dot ds-h\" aria-hidden=\"true\"></span><span class=\"ds-ref\"><b>Bukhari 1469</b><span class=\"ds-det\">Zakat</span></span><svg class=\"ds-chev\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m6 9 6 6 6-6\"/></svg></button></li><li class=\"ds-wall-li\"><button class=\"ds-wall-row\" aria-expanded=\"false\"><span class=\"ds-beam\" style=\"width:1.25rem\" aria-hidden=\"true\"></span><span class=\"ds-dot ds-q\" aria-hidden=\"true\"></span><span class=\"ds-ref\"><b>39:10</b><span class=\"ds-det\">Az-Zumar</span></span><svg class=\"ds-chev\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m6 9 6 6 6-6\"/></svg></button></li></ul></section>",
+      "css": ".ds-wall { font-family: Salawat, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, Roboto, sans-serif; color: rgb(var(--ink)); } .ds-wall-h { margin: 0 0 4px; font-size: 0.8125rem; font-weight: 600; color: rgb(var(--ink-2)); } .ds-wall-list { list-style: none; margin: 0; padding: 0; } .ds-wall-li.ds-open { background: rgb(var(--sunk) / 0.6); border-radius: 12px; } .ds-wall-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 0 12px 0 0; border: 0; border-radius: 12px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1), background-color 120ms, color 120ms; } .ds-wall-row:hover { background: rgb(var(--sunk) / 0.6); } .ds-wall-row:active { transform: scale(0.97); } .ds-wall-row:focus-visible { outline: 2px solid rgb(var(--quran)); outline-offset: 2px; border-radius: 6px; } .ds-beam { position: relative; flex-shrink: 0; height: 12px; border-radius: 0 3px 3px 0; background: rgb(var(--ronier)); transform-origin: left; animation: ds-extrude 520ms cubic-bezier(0.16, 1, 0.3, 1) both; } .ds-beam::after { content: ''; position: absolute; top: 0; bottom: 0; right: 0; width: 6px; border-radius: 0 3px 3px 0; background: rgb(var(--clay)); } .ds-dot { width: 10px; height: 10px; flex-shrink: 0; border-radius: 9999px; } .ds-q { background: rgb(var(--quran)); } .ds-h { background: rgb(var(--hadith)); } .ds-ref { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-det { margin-left: 8px; font-size: 0.9375rem; color: rgb(var(--ink-3)); } .ds-chev { flex-shrink: 0; color: rgb(var(--ink-3)); transition: transform 200ms; } [aria-expanded='true'] .ds-chev { transform: rotate(180deg); } @keyframes ds-extrude { from { transform: scaleX(0); } to { transform: scaleX(1); } } @media (prefers-reduced-motion: reduce) { .ds-beam { animation-duration: 1ms; } }"
+    },
+    {
+      "name": "Inline Citation",
+      "kind": "custom",
+      "refersTo": "source-beam",
+      "description": "The beam end at text size before a semibold corpus-coloured reference; a tappable button once the answer is complete.",
+      "html": "<p class=\"ds-prose\">La patience est récompensée sans compte <button class=\"ds-cite ds-cite-q\" aria-label=\"Ouvrir la source 39:10\"><span class=\"ds-cite-beam\" aria-hidden=\"true\"></span>39:10</button>, et nul n’a reçu meilleur don <button class=\"ds-cite ds-cite-h\" aria-label=\"Ouvrir la source Bukhari 1469\"><span class=\"ds-cite-beam\" aria-hidden=\"true\"></span>Bukhari 1469</button>.</p>",
+      "css": ".ds-prose { font: 400 1rem/1.6 Salawat, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, Roboto, sans-serif; color: rgb(var(--ink)); } .ds-cite { position: relative; display: inline; padding: 0; border: 0; background: none; font: inherit; font-weight: 600; white-space: nowrap; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 0.2em; cursor: pointer; } .ds-cite-q { color: rgb(var(--quran)); text-decoration-color: rgb(var(--quran) / 0.4); } .ds-cite-h { color: rgb(var(--hadith)); text-decoration-color: rgb(var(--hadith) / 0.4); } .ds-cite::after { content: ''; position: absolute; inset: -10px -4px; } .ds-cite:focus-visible { outline: 2px solid rgb(var(--quran)); outline-offset: 2px; border-radius: 6px; } .ds-cite-beam { position: relative; display: inline-block; width: 0.95em; height: 0.42em; margin-right: 4px; vertical-align: 0.12em; border-radius: 0 2px 2px 0; background: rgb(var(--ronier)); } .ds-cite-beam::after { content: ''; position: absolute; top: 0; bottom: 0; right: 0; width: 0.22em; border-radius: 0 2px 2px 0; background: rgb(var(--clay)); }"
+    },
+    {
+      "name": "Question Bubble",
+      "kind": "card",
+      "refersTo": "user-bubble",
+      "description": "Sunk-plaster bubble for the asker, right-aligned, 20px corners narrowing to 6px at the bottom right.",
+      "html": "<div class=\"ds-q-wrap\"><p class=\"ds-bubble\">Que dit le Coran sur la patience ?</p></div>",
+      "css": ".ds-q-wrap { display: flex; justify-content: flex-end; } .ds-bubble { max-width: 85%; margin: 0; padding: 10px 16px; border-radius: 20px 20px 6px 20px; background: rgb(var(--sunk)); color: rgb(var(--ink)); font: 400 1rem/1.6 Salawat, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, Roboto, sans-serif; white-space: pre-wrap; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Banco Wall",
+    "overview": "The interface is built like a Sahelian earthen mosque (Djenné, Tombouctou). Flat laterite earth forms the shell: the header at the top and the composer dock at the bottom are solid fields of the same burnt red, and the conversation between them is a kaolin-washed wall that holds the reading. Every source an answer relies on comes out of that wall as a palm-wood toron beam. The beam is dark rônier brown with a lighter clay end-grain, and its length shows how relevant the passage is. The same beam end appears at the citation in the text, so the wall, the citation and the opened verse all carry one label and one material.\n\nAt night the wall falls into shadow before Fajr. Values invert to near-black earth (#170D08) under a darker laterite shell, but nothing else about the world changes. Density is calm and one-handed: one column at most 42rem wide, 16px gutters, every control at least 44px, and actions placed in thumb reach at the bottom edge. Colour sits in large flat regions. There is no gradient, grain, glass or ornament in the interface. Sacred text is never used as decoration; Arabic appears only as content, set large in a West African Naskh.",
+    "keyCharacteristics": [
+      "Flat laterite shell (header and dock) holding a kaolin reading ground; no gradients, textures or translucency in the UI.",
+      "Toron beams (rônier body, clay end-grain, square at the wall, rounded at the cut end) are the system's one signature form, used for source relevance, inline citations and the streaming indicator.",
+      "Colour carries meaning: green is Quran and the primary action, ochre is Hadith, laterite is the structure.",
+      "System sans for French UI; Harmattan for all Arabic.",
+      "Two complete palettes (day and night) bound to the same token names."
+    ],
+    "rules": [
+      {
+        "name": "The Meaning Before Colour Rule",
+        "body": "Green means Quran or the primary action; ochre means Hadith. Neither is used for decoration, and a source is never marked by colour alone (the dot is paired with the reference and a screen-reader label).",
+        "section": "colors"
+      },
+      {
+        "name": "The Shell Is Structure Rule",
+        "body": "Laterite fills only the header, the dock and their parts. Content and buttons in the reading ground never take the shell colour as a fill.",
+        "section": "colors"
+      },
+      {
+        "name": "The Gold Belongs To The Mark Rule",
+        "body": "Gold appears only inside the logo mark. No gold UI accents, borders or arabesques.",
+        "section": "colors"
+      },
+      {
+        "name": "The Arabic Is Never Small Rule",
+        "body": "Arabic text is at least 1.75rem and scales with the reading size; it is never truncated mid-verse without a \"Lire le texte entier\" control.",
+        "section": "typography"
+      },
+      {
+        "name": "The 16px Field Rule",
+        "body": "Every input, textarea and select is at least max(1rem, 16px) so Safari never zooms on focus.",
+        "section": "typography"
+      },
+      {
+        "name": "The Thumb Reach Rule",
+        "body": "Primary actions live at the bottom edge (dock, sheet buttons). The header holds only navigation (menu, new question).",
+        "section": "layout"
+      },
+      {
+        "name": "The Still Layout Rule",
+        "body": "Streaming never moves the layout: the status row has a fixed 44px height that later holds the read-aloud action, and citations keep the same size, colour and beam while the answer streams as when it is complete; only the 2px underline arrives once they become tappable, and it does not reflow.",
+        "section": "layout"
+      },
+      {
+        "name": "The Earth Does Not Float Rule",
+        "body": "Cards, rows, buttons and the header carry no drop shadow. Shadows are limited to the 1-3px lifts above, on small moving parts.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep the header and dock solid laterite and the reading area kaolin, in both day and night palettes.",
+      "Do use the toron beam (rônier body, clay end, square left, 3px rounded right) for anything that represents a source, and keep one canonical label per source across the beam, the citation and the card.",
+      "Do mark Quran in logo green and Hadith in ochre, always paired with the reference text.",
+      "Do set every Arabic passage in Harmattan at 1.75rem or more, right-to-left, scaled by the in-app text size.",
+      "Do give every control a 44px minimum target and the 0.97 press response; reserve hover for hover-capable devices.",
+      "Do use the out curve `cubic-bezier(0.16, 1, 0.3, 1)` for entrances and respect reduced motion (all motion collapses to 1ms).",
+      "Do build modals on the native `<dialog>` as bottom sheets on mobile."
+    ],
+    "donts": [
+      "Don't add gradients, grain, glass or blur to the interface. The logo mark keeps its own gradient; it is a brand asset, not a UI style.",
+      "Don't put gold anywhere but the mark, and don't add arabesques, geometric Islamic patterns or calligraphy as decoration.",
+      "Don't use sacred Arabic text as ornament, background or placeholder.",
+      "Don't show sources as grey cards in a grey chatbot column; sources are beams in the wall.",
+      "Don't add drop shadows to cards, rows, buttons or the header.",
+      "Don't let streaming shift the layout or resize or recolour citations when the answer finishes.",
+      "Don't fill buttons in the reading ground with the laterite shell colour."
+    ]
+  }
+}

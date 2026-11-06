@@ -8,6 +8,19 @@ Scale with WEB_CONCURRENCY only if the instance has RAM to spare.
 """
 
 import os
+import secrets
+import sys
+
+# Without DJANGO_SECRET_KEY, generate one here, in the master process, so that
+# every worker signs sessions with the same key (settings.py would otherwise
+# draw a different random key in each worker).
+if not os.environ.get("DJANGO_SECRET_KEY", "").strip():
+    os.environ["DJANGO_SECRET_KEY"] = secrets.token_urlsafe(50)
+    print(
+        "WARNING: DJANGO_SECRET_KEY is not set — generated a random key for this run. "
+        "Set it in the hosting environment to keep admin sessions across restarts.",
+        file=sys.stderr,
+    )
 
 bind = f"0.0.0.0:{os.environ.get('PORT', '8000')}"
 workers = int(os.environ.get("WEB_CONCURRENCY", "1"))

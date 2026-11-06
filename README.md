@@ -145,7 +145,18 @@ python scripts/build_index.py    # embeddings ONNX (long sur CPU)
 
 ## 🚀 Déploiement (Render)
 
-`render.yaml` décrit le service Docker + PostgreSQL. Au déploiement, renseigner `GEMINI_API_KEY` et/ou `GROQ_API_KEY` (et `DJANGO_SUPERUSER_PASSWORD` pour créer l'admin).
+`render.yaml` décrit le service Docker + PostgreSQL. Ses variables ne s'appliquent que si le service a été créé via **New → Blueprint**. Pour un service créé à la main, les définir dans **Environment** :
+
+| Variable | Valeur |
+|---|---|
+| `DJANGO_SECRET_KEY` | une longue valeur aléatoire : `python -c "import secrets; print(secrets.token_urlsafe(50))"` |
+| `GEMINI_API_KEY` et/ou `GROQ_API_KEY` | clés gratuites (au moins une) |
+| `DATABASE_URL` | URL PostgreSQL Render (sinon SQLite, effacée à chaque déploiement) |
+| `EMBEDDING_THREADS` | `1` sur les petites offres |
+| `DJANGO_SUPERUSER_PASSWORD` | facultatif, crée le compte admin |
+| `DJANGO_ALLOWED_HOSTS` | seulement pour un domaine personnalisé (le domaine `.onrender.com` est ajouté automatiquement) |
+
+Sans `DJANGO_SECRET_KEY`, l'app démarre quand même avec une clé aléatoire (un avertissement apparaît dans les logs) : l'API fonctionne, mais les sessions de l'admin Django sont perdues à chaque redémarrage. Le health check répond sur `/api/health/` (et `/api/`).
 
 | | Avant | Après |
 |---|---|---|

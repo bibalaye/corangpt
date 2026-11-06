@@ -1,8 +1,9 @@
 import os
+import secrets
+import sys
 from pathlib import Path
 
 import dj_database_url
-from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -27,9 +28,17 @@ DEBUG = env_bool("DJANGO_DEBUG", False)
 
 SECRET_KEY = env("DJANGO_SECRET_KEY")
 if not SECRET_KEY:
-    if not DEBUG:
-        raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is false.")
-    SECRET_KEY = "django-insecure-dev-only-key"
+    if DEBUG:
+        SECRET_KEY = "django-insecure-dev-only-key"
+    else:
+        # Never crash the deploy, never ship a guessable key: a random key for this process.
+        # (gunicorn.conf.py generates one shared by all workers before they start.)
+        SECRET_KEY = secrets.token_urlsafe(50)
+        print(
+            "WARNING: DJANGO_SECRET_KEY is not set — using a random key. Admin sessions are reset "
+            "on every restart. Set DJANGO_SECRET_KEY in the hosting environment.",
+            file=sys.stderr,
+        )
 
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS") or (["*"] if DEBUG else [])
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")

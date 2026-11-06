@@ -12,6 +12,7 @@ from .views import (
 )
 
 urlpatterns = [
+    path('', health, name='api_root'),  # health checks still configured on /api/ keep working
     path('health/', health, name='health'),
     path('auth/register/', RegisterView.as_view(), name='register'),
     path('auth/login/', LoginView.as_view(), name='login'),

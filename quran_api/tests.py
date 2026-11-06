@@ -80,6 +80,8 @@ class ApiTestBase(TestCase):
 class AuthTests(ApiTestBase):
     def test_health(self):
         self.assertEqual(APIClient().get("/api/health/").json(), {"status": "ok"})
+        # Older Render services still probe /api/
+        self.assertEqual(APIClient().get("/api/").json(), {"status": "ok"})
 
     def test_register_rejects_weak_password(self):
         r = APIClient().post("/api/auth/register/", {"username": "bob", "password": "123"}, format="json")

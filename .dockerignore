@@ -1,57 +1,36 @@
-# ==============================================================
-# .dockerignore – iaCoran
-# ==============================================================
-
-# Git
+# Keep the build context small: the Dockerfile only copies what it needs.
 .git
 .gitignore
-
-# Python
-__pycache__/
+.gitattributes
+**/__pycache__
 *.py[cod]
-*$py.class
-*.so
-*.egg-info/
 venv/
-env/
 .venv/
-
-# IDE
+env/
 .vscode/
 .idea/
 .gemini/
+.claude/
 
-# Database (will be recreated in container)
-db.sqlite3
-db.sqlite3-journal
-
-# Environment files (passed via Render env vars)
+# Secrets & local DB
 .env
 .env.*
+db.sqlite3*
 
-# Frontend & Mobile (not deployed in this container)
+# Not part of the backend image
 frontend/
 mobile/
 node_modules/
-
-# Large uncompressed index files (we use the .zip versions)
-quran_indexed.json
-hadith_indexed.json
-quran_faiss.index
-hadith_faiss.index
-
-# ML model cache
-*.h5
-*.pkl
-*.pt
-*.bin
-
-# Misc
-*.bak
-*.tmp
-*.log
-.cache/
-Thumbs.db
-.DS_Store
+scripts/
+!scripts/trim_vocab.py
+data/raw/
+# downloaded (and checksum-verified) during the build
+models/
+*.zip
+*_indexed.json
+*.index
 README.md
 docs/
+*.log
+*.tmp
+*.bak

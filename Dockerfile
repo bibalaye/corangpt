@@ -1,78 +1,55 @@
+# syntax=docker/dockerfile:1
 # ==============================================================
-# Dockerfile – iaCoran Django Backend (Render deployment)
-# ==============================================================
-# Build:  docker build -t iacoran-backend .
-# Run:    docker run -p 8000:8000 --env-file .env iacoran-backend
+# iaCoran – Django backend (Render)
+#   docker build -t iacoran-backend .
+#   docker run -p 8000:8000 --env-file .env iacoran-backend
+#
+# Slim by design: no PyTorch, no compilers, no apt packages.
+# The ONNX embedding model is prepared at build time (pinned, checksum-verified,
+# vocabulary trimmed), so containers start without downloading anything.
 # ==============================================================
 
-# ---------- Stage 1 : Builder (wheels + unzip data) ----------
-FROM python:3.13-slim AS builder
-
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc g++ gfortran \
-    libopenblas-dev liblapack-dev \
-    unzip \
-    && rm -rf /var/lib/apt/lists/*
-
+# ---------- Stage 1: embedding model (build-time tools stay here) ----------
+FROM python:3.13-slim AS model
+ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
 WORKDIR /build
+RUN pip install onnx==1.23.2 numpy==2.5.4 sentencepiece==0.2.3
 
-# Copy and install Python dependencies as wheels
-COPY requirements.txt .
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+COPY quran_api/__init__.py quran_api/__init__.py
+COPY quran_api/services/__init__.py quran_api/services/model_assets.py quran_api/services/text_utils.py quran_api/services/
+RUN python -m quran_api.services.model_assets /build/full
 
-# Unzip pre-built indexes (quran + hadith)
-COPY quran_indexed.zip hadith_indexed.zip ./
-RUN unzip -o quran_indexed.zip && unzip -o hadith_indexed.zip
+# Keep every token of the corpus + the most frequent ones: 279 MB → ~130 MB model
+ARG VOCAB_TOP=40000
+COPY scripts/trim_vocab.py scripts/trim_vocab.py
+COPY data/index/docs.json.gz data/index/docs.json.gz
+RUN python scripts/trim_vocab.py /build/full /build/model --top "${VOCAB_TOP}"
 
-
-# ---------- Stage 2 : Runtime ----------
+# ---------- Stage 2: runtime ----------
 FROM python:3.13-slim
 
-# System dependencies needed at runtime + dos2unix to fix Windows CRLF
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libopenblas0 libgomp1 dos2unix \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create non-root user
-RUN useradd --create-home appuser
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
 WORKDIR /app
+RUN useradd --create-home --uid 10001 appuser && chown appuser:appuser /app
 
-# Copy installed Python packages from builder
-COPY --from=builder /install /usr/local
+# Dependencies — cached until requirements.txt changes
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 
-# Copy unzipped index files from builder
-COPY --from=builder /build/quran_indexed.json /app/quran_indexed.json
-COPY --from=builder /build/hadith_indexed.json /app/hadith_indexed.json
+COPY --from=model /build/model /app/models/multilingual-e5-base
+COPY data/index/ data/index/
 
-# Copy source data files needed for indexing
-COPY quran_complet.json /app/quran_complet.json
-COPY bukhari_complet.json /app/bukhari_complet.json
+COPY manage.py gunicorn.conf.py entrypoint.sh ./
+COPY core/ core/
+COPY quran_api/ quran_api/
 
-# Copy Django project source code
-COPY manage.py /app/
-COPY core/ /app/core/
-COPY quran_api/ /app/quran_api/
-COPY seed_plans.py /app/
-COPY index_quran.py /app/
-COPY index_hadith.py /app/
+RUN sed -i 's/\r$//' entrypoint.sh && chmod +x entrypoint.sh \
+    && DJANGO_SECRET_KEY=collectstatic-only python manage.py collectstatic --noinput
 
-# Copy entrypoint script and fix Windows CRLF → Unix LF
-COPY entrypoint.sh /app/entrypoint.sh
-RUN dos2unix /app/entrypoint.sh && chmod +x /app/entrypoint.sh
-
-# Create static files directory
-RUN mkdir -p /app/staticfiles
-
-# Set ownership
-RUN chown -R appuser:appuser /app
-
-# Switch to non-root user
 USER appuser
-
-# Expose port (Render assigns $PORT dynamically)
 EXPOSE 8000
-
-# Entrypoint performs migrations, seeding, then starts Gunicorn
 ENTRYPOINT ["/app/entrypoint.sh"]

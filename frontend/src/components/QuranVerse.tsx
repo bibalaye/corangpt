@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, memo } from 'react'
 import type { QuranVerse as QuranVerseType } from '../types/chat'
 
 interface QuranVerseProps {
@@ -11,7 +11,7 @@ interface QuranVerseProps {
  * Displays Arabic text (RTL), French translation, and reference badge.
  * Includes audio playback for the verse.
  */
-export function QuranVerse({ verse, autoPlayTrigger }: QuranVerseProps) {
+export const QuranVerse = memo(function QuranVerse({ verse, autoPlayTrigger }: QuranVerseProps) {
     const isHadith = verse.source_type === 'Hadith'
     const isQuran = !isHadith
 
@@ -104,7 +104,7 @@ export function QuranVerse({ verse, autoPlayTrigger }: QuranVerseProps) {
     };
 
     return (
-        <div className={`quran-verse-block animate-fade-in-up border-l-4 pl-4 py-2 ${isQuran ? 'border-green-500' : 'border-blue-500'} dark:${isQuran ? 'border-green-600' : 'border-blue-600'} bg-white/50 dark:bg-stone-900/50 rounded-r-lg shadow-sm mb-3`}>
+        <div className={`quran-verse-block animate-fade-in-up border-l-4 pl-4 py-2 ${isQuran ? 'border-green-500 dark:border-green-600' : 'border-blue-500 dark:border-blue-600'} bg-white/50 dark:bg-stone-900/50 rounded-r-lg shadow-sm mb-3`}>
             {/* Header: source icon + reference */}
             <div className="flex items-center gap-2 mb-3">
                 {isQuran ? (
@@ -172,4 +172,4 @@ export function QuranVerse({ verse, autoPlayTrigger }: QuranVerseProps) {
             </div>
         </div>
     )
-}
+})

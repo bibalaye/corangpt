@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Sidebar } from './Sidebar'
 import { MessageBubble } from './MessageBubble'
 import { ChatInput } from './ChatInput'
@@ -17,7 +17,25 @@ interface ChatLayoutProps {
  */
 export function ChatLayout({ chat, theme, onToggleTheme }: ChatLayoutProps) {
     const [sidebarOpen, setSidebarOpen] = useState(false)
-    const hasMessages = chat.currentMessages.length > 0
+    const scrollRef = useRef<HTMLDivElement>(null)
+    const messageCount = chat.currentMessages.length
+    const hasMessages = messageCount > 0
+    const lastMessage = chat.currentMessages[messageCount - 1]
+
+    // New message or conversation switch: scroll to the bottom.
+    useEffect(() => {
+        const el = scrollRef.current
+        el?.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+    }, [messageCount, chat.currentId])
+
+    // While an answer streams, follow it — unless the user scrolled up to read.
+    useEffect(() => {
+        const el = scrollRef.current
+        if (!el) return
+        if (el.scrollHeight - el.scrollTop - el.clientHeight < 160) {
+            el.scrollTo({ top: el.scrollHeight, behavior: 'instant' })
+        }
+    }, [lastMessage?.content, lastMessage?.sources])
 
     return (
         <div className="flex h-screen w-screen bg-white dark:bg-[#202123] text-stone-900 dark:text-stone-100 transition-colors duration-300 overflow-hidden font-sans">
@@ -64,15 +82,13 @@ export function ChatLayout({ chat, theme, onToggleTheme }: ChatLayoutProps) {
                 </header>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto" id="messages-scroll">
+                <div ref={scrollRef} className="flex-1 overflow-y-auto" id="messages-scroll">
                     {hasMessages ? (
                         <div className="max-w-3xl mx-auto px-4 md:px-6 py-6 space-y-1">
                             {chat.currentMessages.map(msg => (
                                 <MessageBubble key={msg.id} message={msg} />
                             ))}
 
-                            {/* Auto-scroll anchor */}
-                            <div ref={el => el?.scrollIntoView({ behavior: 'smooth' })} />
                         </div>
                     ) : (
                         <WelcomeScreen onSuggestion={chat.sendMessage} />

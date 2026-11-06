@@ -3,6 +3,7 @@ import json
 import logging
 from typing import Dict, List
 import re
+from pathlib import Path
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -66,7 +67,7 @@ def download_and_merge_hadiths():
         
         merged_hadiths.append(merged_hadith)
 
-    output_file = 'bukhari_complet.json'
+    output_file = Path(__file__).resolve().parent.parent / 'data' / 'raw' / 'bukhari_complet.json'
     logger.info(f"Sauvegarde de {len(merged_hadiths)} hadiths dans {output_file}...")
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(merged_hadiths, f, ensure_ascii=False, indent=2)

@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import F
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.db.models.signals import post_save
@@ -29,24 +30,33 @@ class UserProfile(models.Model):
     def __str__(self):
         return self.user.username
     
+    @classmethod
+    def for_user(cls, user):
+        """Profile of `user`, created on the fly for accounts that predate profiles."""
+        try:
+            return user.profile
+        except cls.DoesNotExist:
+            plan = SubscriptionPlan.objects.filter(name='free').first()
+            profile, _ = cls.objects.get_or_create(user=user, defaults={'subscription_plan': plan})
+            return profile
+
+    def daily_limit(self):
+        return self.subscription_plan.daily_request_limit if self.subscription_plan else 5
+
     def can_make_request(self):
-        # Reset daily count if the day has changed
-        today = timezone.now().date()
+        # Reset the daily counter when the day has changed
+        today = timezone.localdate()
         if self.last_request_date != today:
             self.requests_today = 0
             self.last_request_date = today
-            self.save()
-        
-        limit = self.subscription_plan.daily_request_limit if self.subscription_plan else 5
-        
-        if limit == -1:
-            return True
-            
-        return self.requests_today < limit
-        
+            self.save(update_fields=['requests_today', 'last_request_date'])
+
+        limit = self.daily_limit()
+        return limit == -1 or self.requests_today < limit
+
     def increment_request(self):
-        self.requests_today += 1
-        self.save()
+        # Atomic in SQL: concurrent requests cannot overwrite each other's count
+        UserProfile.objects.filter(pk=self.pk).update(requests_today=F('requests_today') + 1)
 
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
@@ -58,10 +68,6 @@ def create_user_profile(sender, instance, created, **kwargs):
         )
         UserProfile.objects.create(user=instance, subscription_plan=free_plan)
 
-@receiver(post_save, sender=User)
-def save_user_profile(sender, instance, **kwargs):
-    instance.profile.save()
-
 class ChatHistory(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chat_history')
     query = models.TextField()
@@ -71,6 +77,7 @@ class ChatHistory(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [models.Index(fields=['user', '-created_at'], name='chathistory_user_recent')]
 
     def __str__(self):
         return f"{self.user.username} - {self.query[:50]}"

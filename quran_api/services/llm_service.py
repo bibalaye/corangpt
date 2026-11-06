@@ -1,173 +1,163 @@
-import google.generativeai as genai
-from django.conf import settings
+"""
+LLM access through free, OpenAI-compatible APIs with automatic fallback.
+
+Providers are tried in order (LLM_PROVIDER_ORDER); only those with an API key
+are enabled. When one fails — free-tier quota (429), outage, timeout — the
+next one answers. One small SDK (`openai`) replaces google-generativeai and
+its gRPC/protobuf/google-api stack.
+
+    gemini   → Google AI Studio free tier   (gemini-3.8-flash / gemini-3.5-flash-lite)
+    groq     → Groq free tier               (openai/gpt-oss-120b / openai/gpt-oss-20b)
+    cerebras → Cerebras free tier           (gpt-oss-120b)
+"""
+
+from __future__ import annotations
+
 import logging
+import threading
+from collections.abc import Iterator
+from dataclasses import dataclass
+
+from django.conf import settings
+from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
-# Prompt for query rewriting — short, focused
-_REWRITE_SYSTEM_PROMPT = (
-    "Tu es un expert en recherche islamique. "
-    "Ton rôle est de transformer une question utilisateur en mots-clés de recherche optimisés.\n\n"
-    "Règles :\n"
-    "- Extrais uniquement les concepts religieux et thématiques essentiels\n"
-    "- Supprime les formules de politesse, les mots vides et le bruit\n"
-    "- Garde 3 à 8 mots-clés maximum\n"
-    "- Utilise les termes coraniques quand possible (ex: 'sawm' pour jeûne, 'sabr' pour patience)\n"
-    "- Inclus les termes en français ET en arabe si pertinent\n"
-    "- Réponds UNIQUEMENT avec les mots-clés, rien d'autre\n\n"
-    "Exemples :\n"
-    "Q: Peux-tu m'expliquer en détail ce que dit le Coran sur les règles du jeûne pendant le mois de Ramadan ?\n"
-    "R: jeûne Ramadan règles sawm صيام رمضان\n\n"
-    "Q: Quels sont les droits des parents dans l'Islam selon le Coran ?\n"
-    "R: droits parents respect obéissance والدين\n\n"
-    "Q: Que dit le Coran sur la patience dans les épreuves ?\n"
-    "R: patience épreuves sabr صبر"
-)
+
+class LLMUnavailableError(RuntimeError):
+    """Every configured provider failed (or none is configured)."""
+
+
+@dataclass(frozen=True)
+class Provider:
+    name: str
+    base_url: str
+    api_key: str
+    model: str
+    fast_model: str
+    reasoning_effort: str | None
+
+
+def _delta_text(chunk) -> str:
+    if not chunk.choices:
+        return ""
+    return chunk.choices[0].delta.content or ""
 
 
 class LLMService:
-    def __init__(self):
-        api_key = getattr(settings, 'GEMINI_API_KEY', None)
-        if api_key and api_key.lower() not in ('none', ''):
-            genai.configure(api_key=api_key)
-            self.model = genai.GenerativeModel('gemini-3-flash-preview')
-            logger.info(f"LLMService initialized with key {api_key[:8]}...{api_key[-4:]}")
+    def __init__(self, providers: list[Provider], timeout: float = 60, max_tokens: int = 2048):
+        self.providers = providers
+        self.max_tokens = max_tokens
+        # max_retries=1: retry a transient blip once, then let the next provider answer.
+        self._clients = {
+            p.name: OpenAI(api_key=p.api_key, base_url=p.base_url, timeout=timeout, max_retries=1)
+            for p in providers
+        }
+        if providers:
+            logger.info("LLM providers: %s", ", ".join(f"{p.name}({p.model})" for p in providers))
         else:
-            self.model = None
-            logger.warning("GEMINI_API_KEY is not configured.")
+            logger.warning("No LLM provider configured — set GEMINI_API_KEY and/or GROQ_API_KEY.")
 
-    def rewrite_query(self, question: str) -> str:
+    @property
+    def available(self) -> bool:
+        return bool(self.providers)
+
+    def _params(self, p: Provider, messages: list[dict], fast: bool, max_tokens: int | None) -> dict:
+        params = {
+            "model": p.fast_model if fast else p.model,
+            "messages": messages,
+            "max_tokens": max_tokens or self.max_tokens,
+        }
+        if p.reasoning_effort:
+            params["reasoning_effort"] = p.reasoning_effort
+        return params
+
+    def complete(self, messages: list[dict], *, fast: bool = False, max_tokens: int | None = None) -> str:
+        last_error: Exception | None = None
+        for p in self.providers:
+            params = self._params(p, messages, fast, max_tokens)
+            try:
+                resp = self._clients[p.name].chat.completions.create(**params)
+                text = (resp.choices[0].message.content or "").strip() if resp.choices else ""
+                if text:
+                    return text
+                last_error = RuntimeError("empty response")
+            except Exception as e:  # noqa: BLE001 — any failure means "try the next provider"
+                last_error = e
+            logger.warning("LLM %s/%s failed: %s", p.name, params["model"], last_error)
+        raise LLMUnavailableError("All LLM providers failed") from last_error
+
+    def stream(self, messages: list[dict], *, max_tokens: int | None = None) -> Iterator[str]:
         """
-        Transform a long user question into concise search keywords.
-
-        Uses Gemini to extract the core Islamic/Quranic concepts,
-        producing an optimized query for vector search.
-        Returns the original question if rewriting fails.
+        Yield text chunks. Falls back to the next provider as long as nothing
+        has been sent to the client yet; after the first token we stay on the
+        same provider (switching mid-answer would produce an incoherent text).
         """
-        if not self.model:
-            return question
+        last_error: Exception | None = None
+        for p in self.providers:
+            params = self._params(p, messages, False, max_tokens)
+            try:
+                chunks = iter(self._clients[p.name].chat.completions.create(**params, stream=True))
+                first = ""
+                for chunk in chunks:
+                    first = _delta_text(chunk)
+                    if first:
+                        break
+                if not first:
+                    raise RuntimeError("empty stream")
+            except Exception as e:  # noqa: BLE001
+                last_error = e
+                logger.warning("LLM stream %s/%s failed: %s", p.name, params["model"], e)
+                continue
 
-        # Short questions (< 6 words) don't need rewriting
-        if len(question.split()) <= 6:
-            logger.debug(f"Query too short to rewrite: '{question}'")
-            return question
-
-        try:
-            prompt = f"{_REWRITE_SYSTEM_PROMPT}\n\nQ: {question}\nR:"
-            response = self.model.generate_content(prompt)
-            rewritten = response.text.strip()
-
-            # Sanity check: if rewrite is empty or too long, fallback
-            if not rewritten or len(rewritten) > len(question):
-                logger.warning(f"Query rewrite produced bad result, using original")
-                return question
-
-            logger.info(f"Query rewrite: '{question}' → '{rewritten}'")
-            return rewritten
-
-        except Exception as e:
-            logger.warning(f"Query rewrite failed, using original: {e}")
-            return question
-
-    def generate_response(self, question: str, contexts: list):
-        if not self.model:
-            return "Désolé, le service LLM n'est pas configuré. Veuillez vérifier la présence de GEMINI_API_KEY."
-
-        # Format context for the prompt
-        context_str = ""
-        for i, ctx in enumerate(contexts):
-            source_type = ctx.get('source_type', 'Coran')
-            context_str += f"- [{source_type}] {ctx['reference']} :\n  Texte Arabe : {ctx.get('text_ar', '')}\n  Traduction Française : {ctx.get('text_fr', '')}\n\n"
-
-        system_instruction = (
-            "Tu es un assistant islamique bienveillant et érudit. "
-            "Ta mission est d'aider les utilisateurs à comprendre l'Islam "
-            "en t'appuyant sur le Coran et les Hadiths qui te sont fournis en contexte.\n\n"
-            "Comment répondre :\n"
-            "- Utilise un langage naturel, fluide et chaleureux, comme un savant qui explique avec douceur.\n"
-            "- Base tes réponses UNIQUEMENT sur les sources fournies dans le contexte ci-dessous.\n"
-            "- Précise toujours la source de tes citations (ex: Sourate Al-Baqara, 2:153 pour le Coran ou la référence du Hadith fournie).\n"
-            "- Explique le sens des textes de manière accessible, en les reliant à la question posée.\n"
-            "- Tu peux reformuler, contextualiser et enrichir ta réponse pour la rendre pédagogique.\n"
-            "- Si les textes fournis répondent clairement à la question, n'hésite pas à le dire avec assurance.\n"
-            "- Si aucun texte du contexte ne traite du sujet demandé, réponds simplement :\n"
-            "  \"Je ne trouve pas de réponse claire dans les sources qui me sont fournies.\"\n\n"
-            "Garde toujours un ton respectueux, bienveillant et accessible."
-        )
-
-        prompt = (
-            f"{system_instruction}\n\n"
-            f"CONTEXTE :\n{context_str}\n"
-            f"QUESTION : {question}\n\n"
-            f"RÉPONSE :"
-        )
-
-        try:
-            response = self.model.generate_content(prompt)
-            return response.text.strip()
-        except Exception as e:
-            logger.exception(f"Erreur lors de l'appel à Gemini: {e}")
-            return "Une erreur est survenue lors de la génération de la réponse."
-
-    def generate_response_stream(self, question: str, contexts: list):
-        """
-        Generator that yields text chunks from Gemini streaming.
-
-        Uses the same prompt as generate_response but streams
-        the output token by token for real-time display.
-        """
-        if not self.model:
-            yield "Désolé, le service LLM n'est pas configuré."
+            logger.info("Answer streamed by %s/%s", p.name, params["model"])
+            yield first
+            try:
+                for chunk in chunks:
+                    if text := _delta_text(chunk):
+                        yield text
+            except Exception as e:  # noqa: BLE001
+                logger.warning("LLM stream %s interrupted: %s", p.name, e)
+                yield "\n\n*(Réponse interrompue, veuillez réessayer.)*"
             return
 
-        # Format context
-        context_str = ""
-        for ctx in contexts:
-            source_type = ctx.get('source_type', 'Coran')
-            context_str += (
-                f"- [{source_type}] {ctx['reference']} :\n"
-                f"  Texte Arabe : {ctx.get('text_ar', '')}\n"
-                f"  Traduction Française : {ctx.get('text_fr', '')}\n\n"
-            )
+        raise LLMUnavailableError("All LLM providers failed") from last_error
 
-        system_instruction = (
-            "Tu es un assistant islamique bienveillant et érudit. "
-            "Ta mission est d'aider les utilisateurs à comprendre l'Islam "
-            "en t'appuyant sur le Coran et les Hadiths qui te sont fournis en contexte.\n\n"
-            "Comment répondre :\n"
-            "- Utilise un langage naturel, fluide et chaleureux, comme un savant qui explique avec douceur.\n"
-            "- Base tes réponses UNIQUEMENT sur les sources fournies dans le contexte ci-dessous.\n"
-            "- Précise toujours la source de tes citations (ex: Sourate Al-Baqara, 2:153 pour le Coran ou la référence du Hadith fournie).\n"
-            "- Explique le sens des textes de manière accessible, en les reliant à la question posée.\n"
-            "- Tu peux reformuler, contextualiser et enrichir ta réponse pour la rendre pédagogique.\n"
-            "- Si les textes fournis répondent clairement à la question, n'hésite pas à le dire avec assurance.\n"
-            "- Si aucun texte du contexte ne traite du sujet demandé, réponds simplement :\n"
-            "  \"Je ne trouve pas de réponse claire dans les sources qui me sont fournies.\"\n\n"
-            "Garde toujours un ton respectueux, bienveillant et accessible."
-        )
 
-        prompt = (
-            f"{system_instruction}\n\n"
-            f"CONTEXTE :\n{context_str}\n"
-            f"QUESTION : {question}\n\n"
-            f"RÉPONSE :"
-        )
+def providers_from_settings() -> list[Provider]:
+    configs = settings.LLM_PROVIDERS
+    providers = []
+    for name in settings.LLM_PROVIDER_ORDER:
+        cfg = configs.get(name)
+        if not cfg:
+            logger.warning("Unknown LLM provider '%s' in LLM_PROVIDER_ORDER", name)
+            continue
+        key = (cfg.get("api_key") or "").strip()
+        if not key or key.lower() in {"none", "your_api_key"}:
+            continue
+        providers.append(Provider(
+            name=name,
+            base_url=cfg["base_url"],
+            api_key=key,
+            model=cfg["model"],
+            fast_model=cfg.get("fast_model") or cfg["model"],
+            reasoning_effort=cfg.get("reasoning_effort") or None,
+        ))
+    return providers
 
-        try:
-            response = self.model.generate_content(prompt, stream=True)
-            for chunk in response:
-                if chunk.text:
-                    yield chunk.text
-        except Exception as e:
-            logger.exception(f"Streaming error: {e}")
-            yield f"\n\n[Erreur: {str(e)}]"
 
-# Singleton instance
-_llm_service = None
+_llm_service: LLMService | None = None
+_lock = threading.Lock()
 
-def get_llm_service():
+
+def get_llm_service() -> LLMService:
     global _llm_service
     if _llm_service is None:
-        _llm_service = LLMService()
+        with _lock:
+            if _llm_service is None:
+                _llm_service = LLMService(
+                    providers_from_settings(),
+                    timeout=settings.LLM_TIMEOUT,
+                    max_tokens=settings.LLM_MAX_TOKENS,
+                )
     return _llm_service
-

@@ -11,3 +11,7 @@ createRoot(document.getElementById('root')!).render(
         </AuthProvider>
     </StrictMode>
 )
+
+// Fetch the Markdown chunk once the page is idle, before the first answer needs it
+const idle = window.requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 1500))
+idle(() => { import('./components/Markdown') })

@@ -1,0 +1,23 @@
+{
+  "format": 1,
+  "model": "intfloat/multilingual-e5-base",
+  "onnx_repo": "Xenova/multilingual-e5-base",
+  "onnx_revision": "1ec9243030a27d1a115d5c340572074c125b58b2",
+  "dimension": 768,
+  "count": 13816,
+  "dtype": "float16",
+  "normalization": "quran_api.services.text_utils.normalize_text",
+  "sources": {
+    "quran": {
+      "start": 0,
+      "end": 6236,
+      "label": "Coran"
+    },
+    "hadith": {
+      "start": 6236,
+      "end": 13816,
+      "label": "Hadith"
+    }
+  },
+  "created_at": "2026-11-06T13:28:02+00:00"
+}

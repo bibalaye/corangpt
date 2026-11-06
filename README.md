@@ -8,16 +8,16 @@
 
 | Fonctionnalité | Description |
 |----------------|-------------|
-| **Recherche Hybride Sémantique** | Trouve des versets coraniques et des ahadith par sens via l'IA |
+| **Recherche Sémantique** | Trouve des versets et des ahadith par le sens (question + reformulation fusionnées par RRF) |
 | **Filtres de Sources** | Recherche au choix : `Coran uniquement`, `Hadith uniquement` ou `Les deux` |
-| **Assistant IA (RAG)** | Répond aux questions complexes en citant les textes avec extrême précision |
-| **Streaming temps réel** | Réponse affichée token par token avec curseur clignotant |
-| **Anti-hallucination** | L'IA ne répond que si la réponse est présente dans les textes fondateurs |
-| **Normalisation NLP Avancée**| Gestion des accents, harakat arabes et variantes orthographiques |
-| **Comptes et Abonnements** | Système d'authentification utilisateur et de limitations quotidiennes |
-| **Multi-conversations** | Historique persistant des conversations avec barre latérale style ChatGPT |
-| **Thème Clair / Sombre** | Basculement automatique et manuel du mode sombre (persistant) |
-| **Interface Premium** | Client React + Tailwind CSS ultramoderne copiant l'UX millimétrée de ChatGPT |
+| **Assistant IA (RAG)** | Répond aux questions en citant les textes avec leur référence exacte |
+| **IA 100 % gratuite** | Gemini, Groq ou Cerebras (offres gratuites), avec bascule automatique si un quota est atteint |
+| **Streaming temps réel** | Réponse affichée au fil de l'eau (NDJSON) |
+| **Anti-hallucination** | L'IA ne répond qu'à partir des passages fournis |
+| **Normalisation NLP** | Gestion des accents, harakat arabes et variantes orthographiques |
+| **Comptes et Abonnements** | Authentification et quotas quotidiens par plan |
+| **Multi-conversations** | Historique persistant avec barre latérale |
+| **Thème Clair / Sombre** | Basculement automatique et manuel (persistant) |
 
 ---
 
@@ -25,176 +25,141 @@
 
 ```text
 iacoran/
-├── core/                          # Configuration principale Django
-│   ├── settings.py                # Variables d'environnement, config centralisée
-│   └── urls.py                    # Routage principal API
-│
-├── quran_api/                     # Application Django (Logique Serveur)
-│   ├── views.py                   # Endpoints REST (Auth, Search, Ask, Streaming limités)
-│   ├── models.py                  # Modèles BDD (UserProfile, SubscriptionPlan)
-│   ├── serializers.py             # DRF Serializers
-│   └── services/                  # Couche logique métier
-│       ├── vector_service.py      # Recherche vectorielle multi-sources (FAISS Coran + Hadith)
-│       ├── llm_service.py         # Gemini LLM + Query Rewriting + Streaming RAG
-│       └── text_utils.py          # Normalisation NLP FR/AR
-│
-├── frontend/                      # Interface Utilisateur React
-│   ├── src/
-│   │   ├── main.tsx               # Entry point
-│   │   ├── App.tsx                # App root + gestion Auth
-│   │   ├── lib/api.ts             # Client d'API (fetch standard + NDJSON streaming)
-│   │   ├── hooks/                 # Hooks de logique (useChat, useAudioSettings)
-│   │   └── components/            # Composants UI
-│   │       ├── ChatLayout.tsx     # Structure principale
-│   │       ├── Sidebar.tsx        # Barre latérale (Historique & Profil)
-│   │       ├── MessageBubble.tsx  # Affichage message User / Assistant (Prose/Markdown)
-│   │       ├── ChatInput.tsx      # Champ de saisie multi-lignes + Filtres Coran/Hadith
-│   │       ├── LimitModal.tsx     # Modale de dépassement de quota (Style premium)
-│   │       └── WelcomeScreen.tsx  # Écran plat de démarrage
-│
-├── scripts de données/            # ETL pour l'IA
-│   ├── fetch_hadith.py            # Scraping/Récupération des Ahadith
-│   ├── index_hadith.py            # Transformation des ahadith en vecteurs E5
-│   ├── index_quran.py             # Transformation du Coran complet en vecteurs E5
-│   └── seed_plans.py              # Script d'initialisation des plans d'abonnement
-│
-├── [bases de connaissances]       # Fichiers volumineux (générés)
-│   ├── quran_complet.json / bukhari_complet.json   # Données textuelles brutes
-│   ├── quran_indexed.json / hadith_indexed.json    # Méta-données et embbedings bruts
-│   └── quran_faiss.index / hadith_faiss.index      # Index binaires ultra-rapides générés
-│
-└── requirements.txt               # Dépendances Backend (Python)
+├── core/                         # Configuration Django (settings, urls, wsgi)
+├── quran_api/                    # Application Django
+│   ├── views.py                  # Endpoints REST (auth, search, ask, streaming, health)
+│   ├── models.py                 # UserProfile, SubscriptionPlan, ChatHistory
+│   ├── management/commands/      # seed_plans
+│   ├── tests.py                  # Tests (sans modèle ni clé API)
+│   └── services/
+│       ├── rag.py                # Pipeline : reformulation → recherche → réponse (prompts)
+│       ├── llm_service.py        # Fournisseurs LLM gratuits + bascule automatique
+│       ├── vector_service.py     # Recherche vectorielle numpy (Coran + Hadith)
+│       ├── embedder.py           # Embeddings E5 sur ONNX Runtime (sans PyTorch)
+│       ├── model_assets.py       # Téléchargement épinglé + vérifié (SHA-256) du modèle
+│       └── text_utils.py         # Normalisation FR/AR
+├── data/
+│   ├── raw/                      # quran_complet.json, bukhari_complet.json (textes sources)
+│   └── index/                    # Index compact : vectors.npy, docs.json.gz, manifest.json (~25 Mo)
+├── scripts/
+│   ├── build_index.py            # Reconstruit l'index depuis data/raw (ONNX, sans PyTorch)
+│   ├── convert_legacy_index.py   # Convertit les anciens *_indexed.zip sans recalcul
+│   ├── trim_vocab.py             # Réduit le vocabulaire du modèle (étape du build Docker)
+│   └── fetch_hadith.py           # Télécharge Sahih al-Bukhari (FR + AR)
+├── frontend/                     # React 19 + Vite + Tailwind
+├── Dockerfile · entrypoint.sh · gunicorn.conf.py · render.yaml
+└── requirements.txt
 ```
 
 ---
 
-## 🧠 Pipeline RAG Multi-Sources
-
-Le cœur du système repose sur un pipeline de "Retrieval-Augmented Generation" robuste :
+## 🧠 Pipeline RAG
 
 ```mermaid
 graph TD;
-    Q[Question Utilisateur] --> R[Query Rewriting Gemini]
-    R --> N[Normalisation NLP]
-    
-    N --> V_Q[Vector Search Coran FAISS]
-    N --> V_H[Vector Search Hadith FAISS]
-    
-    V_Q --> F[Filtrage Actif Interface]
-    V_H --> F
-    
-    F --> C[Top Résultats Combinés]
-    C --> G[LLM Prompting & Streaming Gemini ⚡]
-    G --> U[Frontend React UI]
+    Q[Question] --> R[Reformulation en mots-clés<br/>modèle rapide gratuit]
+    Q --> E[Embedding E5 ONNX local]
+    R --> E
+    E --> S[Similarité cosinus numpy<br/>Coran + Hadith, filtrables]
+    S --> F[Fusion RRF → top passages]
+    F --> G[LLM gratuit en streaming<br/>Gemini → Groq → Cerebras]
+    G --> U[Frontend React]
 ```
 
-### Normalisation
-Le module `text_utils.py` garantit qu'aucune subtilité linguistique ne perturbera la recherche.
-- `صِيَامُ` → `صيام`
-- `Jeûne` → `jeune`
+- **Embeddings** : `intfloat/multilingual-e5-base` exporté en ONNX int8, exécuté localement (gratuit, sans quota, ~50 ms par requête). Le vocabulaire est réduit aux tokens utiles (tous ceux du corpus + les 40 000 plus fréquents) : le modèle passe de 279 à 131 Mo, avec des résultats identiques pour les questions en français et en arabe.
+- **Recherche** : ~14 000 vecteurs → un simple produit matriciel numpy (quelques ms), sans FAISS.
+- **LLM** : fournisseurs compatibles OpenAI essayés dans l'ordre ; seuls ceux qui ont une clé sont actifs. Si l'un échoue (quota gratuit, panne), le suivant répond.
 
----
+| Fournisseur | Modèle principal | Modèle rapide (reformulation) | Clé gratuite |
+|---|---|---|---|
+| Google AI Studio | `gemini-3.8-flash` | `gemini-3.5-flash-lite` | https://aistudio.google.com/apikey |
+| Groq | `openai/gpt-oss-120b` | `openai/gpt-oss-20b` | https://console.groq.com/keys |
+| Cerebras | `gpt-oss-120b` | `gpt-oss-120b` | https://cloud.cerebras.ai |
 
-## 🛠️ Stack Technique
-
-### Backend (Python/Django)
-- **Django 5+** + Django REST Framework (API et système d'authentification)
-- **FAISS (CPU/GPU)** — Recherche par distance L2 dans l'espace vectoriel dense
-- **SentenceTransformers** — Modèle d'embedding `intfloat/multilingual-e5-base`
-- **Google Gemini 1.5 Flash** — LLM de haut vol assurant rapidité et fidélité de restitution
-- **SQLite** — Base de données utilisateur/usage
-
-### Frontend (Modern React)
-- **React 19** / **TypeScript**
-- **Vite 6** avec hot-reload & Proxy API
-- **Tailwind CSS 3** (Charte méticuleuse empruntant au nouveau design web de ChatGPT)
-- **NDJSON Streaming** persillé manuellement via JS `ReadableStream`
-- Support rendu riche Markdown
+Les modèles se changent sans toucher au code via les variables `GEMINI_MODEL`, `GROQ_MODEL`, etc. (voir `.env.example`).
 
 ---
 
 ## 📦 Installation & Démarrage Local
 
 ### Pré-requis
-- **Python 3.11+**
-- **Node.js 18+**
-- Une **[Clé API Google Gemini](https://aistudio.google.com/apikey)**
+- **Python 3.12+** et **Node.js 18+**
+- Au moins une clé gratuite : **Gemini** et/ou **Groq** (recommandé : les deux, pour la bascule)
 
-### Étape 1 — Environnement & Backend
+### Backend
 
 ```powershell
-# 1. Cloner
-git clone <repo-url> iacoran
-cd iacoran
-
-# 2. Venv & Dépendances
 python -m venv venv
-.\venv\Scripts\activate   # ou source venv/bin/activate (Linux/Mac)
+.\venv\Scripts\activate          # ou: source venv/bin/activate
 pip install -r requirements.txt
 
-# 3. Environnement
-# (Créer un fichier .env contenant GEMINI_API_KEY et DJANGO_SECRET_KEY)
-# echo "GEMINI_API_KEY=YOUR_API_KEY" > .env
-# echo "DJANGO_SECRET_KEY=dev_secret" >> .env
+copy .env.example .env           # ou: cp .env.example .env — puis renseigner les clés
 
-# 4. Base de Données
-python manage.py makemigrations
 python manage.py migrate
-
-# 5. Injection de la configuration Initiale
-python seed_plans.py
+python manage.py seed_plans
+python manage.py runserver       # le modèle ONNX (~280 Mo) est téléchargé au 1er lancement
 ```
 
-### Étape 2 — Génération des Index (Une Fois)
+L'index (`data/index/`) est fourni : **aucune indexation n'est nécessaire.**
 
-⚠️ Prévoyez 30-45 min pour générer la connaissance de l'IA (en fonction du CPU).
+Optionnel : utiliser aussi en local le modèle réduit (~150 Mo de RAM en moins) :
 
 ```powershell
-# Indexer le Coran (~20 min)
-python index_quran.py
-
-# Indexer les Ahadith (Bukhari) (~20 min)
-# python fetch_hadith.py (Seulement si vous n'avez pas bukhari_complet.json)
-python index_hadith.py
+pip install onnx
+python scripts/trim_vocab.py models/multilingual-e5-base models/e5-trimmed
+# puis dans .env : EMBEDDING_MODEL_DIR=models/e5-trimmed
 ```
 
-### Étape 3 — Lancement Serveurs
+### Frontend
 
-**Terminal Backend :**
-```powershell
-python manage.py runserver
-```
-
-**Terminal Frontend :**
 ```powershell
 cd frontend
 npm install
-npm run dev
+npm run dev                      # http://localhost:3000 (proxy /api → :8000)
 ```
 
-L'application est servie élégamment sur **[http://localhost:5173](http://localhost:5173)**.
+### Tests
+
+```powershell
+python manage.py test quran_api
+```
+
+### Reconstruire l'index (seulement si les textes changent)
+
+```powershell
+python scripts/fetch_hadith.py   # optionnel : re-télécharger Bukhari
+python scripts/build_index.py    # embeddings ONNX (long sur CPU)
+```
 
 ---
 
-## 🔌 API Endpoints Principaux
+## 🚀 Déploiement (Render)
+
+`render.yaml` décrit le service Docker + PostgreSQL. Au déploiement, renseigner `GEMINI_API_KEY` et/ou `GROQ_API_KEY` (et `DJANGO_SUPERUSER_PASSWORD` pour créer l'admin).
+
+| | Avant | Après |
+|---|---|---|
+| Dépendances Python | 81 paquets (PyTorch, transformers, scipy, FAISS, SDK Google…) | 32 paquets (12 directs), ~230 Mo installés |
+| Données d'index | 108 Mo de zips → 264 Mo de JSON parsés en RAM | 25 Mo (float16 + JSON gzip) |
+| Modèle d'embedding | PyTorch fp32 ~1,1 Go, téléchargé au 1er appel de chaque conteneur | ONNX int8 réduit 131 Mo, intégré à l'image |
+| RAM | estimée à ~2 Go par worker, ×2 workers | ~390 Mo au pic (mesuré), 1 worker + 8 threads |
+| Démarrage | téléchargement du modèle + parsing JSON au 1er appel | ~2 s, chargé avant d'accepter le trafic |
+
+---
+
+## 🔌 API
 
 | Méthode | Route | Description | Auth |
 |---|---|---|---|
-| POST | `/api/register/` | Création de compte utilisateur | Ouverte |
-| POST | `/api/login/` | Obtenir les tokens DRF | Ouverte |
-| GET | `/api/user/` | Obtenir statistiques du quota & profil | Requise |
-| POST | `/api/ask/stream/` | Poser une question (Streaming RAG) | Requise (Génère une 403 si limite) |
-| GET | `/api/search/` | Recherche RAG pure format JSON | Optionnelle |
+| GET | `/api/health/` | Sonde de santé (Render) | — |
+| POST | `/api/auth/register/` | Création de compte | — |
+| POST | `/api/auth/login/` | Obtenir un token | — |
+| GET | `/api/history/` | 50 dernières questions | Token |
+| GET | `/api/search/?q=…&limit=5&source_filter=both` | Recherche sémantique seule (sans LLM) | — |
+| POST | `/api/ask/` | Question → réponse sourcée (JSON) | Token, quota |
+| POST | `/api/ask/stream/` | Question → réponse en streaming NDJSON | Token, quota |
 
-*Chaque endpoint streaming inclut dans ses payloads la restitution de métriques de limites API sous les attributs `reset_time` sur l'UI.*
-
----
-
-## 🛡️ Règle d'Architecture & Contribution
-
-1. **Anti-Hallucination :** Le système de prompt injecte strictement un JSON de passages en amont de toute question pour contraindre le LLM au RAG.
-2. **Frontend UI :** Les directives CSS sont logées dans `index.css`. TailWind CSS est strict (pas de padding brut s'il existe une classe utilitaire). L'UI doit rester totalement minimale ("Page blanche").
-3. **DRF Auth :** Les appels API frontend s'appuient sur l'attachement d'un Headers de `Authorization: Token XXXXXX` à `fetch()`. Le rafraîchissement est automatique s'il manque.
+Le streaming envoie `{"type":"sources"}`, puis des `{"type":"token"}`, puis `{"type":"done"}`. Les erreurs arrivent sous la forme `{"type":"error","error_code":"limit_reached"|"llm_unavailable"}`.
 
 ---
 

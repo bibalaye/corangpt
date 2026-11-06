@@ -1,62 +1,22 @@
 #!/usr/bin/env bash
-# ==============================================================
-# entrypoint.sh – iaCoran Django startup script for Render
-# ==============================================================
-# Steps executed on each container start:
-#   1. Apply database migrations
-#   2. Collect static files
-#   3. Create superuser (if env vars provided)
-#   4. Seed subscription plans
-#   5. Build FAISS indexes for Quran & Hadith (if missing)
-#   6. Start Gunicorn
-# ==============================================================
-set -e
+# iaCoran – container startup: migrations, plans, optional superuser, Gunicorn.
+set -euo pipefail
 
-echo "============================================="
-echo "  🚀 iaCoran – Démarrage du conteneur"
-echo "============================================="
-
-# ---- 1. Migrations ----
-echo ""
-echo "📦 [1/5] Application des migrations..."
+echo "▶ Migrations"
 python manage.py migrate --noinput
-echo "✅ Migrations appliquées."
 
-# ---- 2. Collect static files ----
-echo ""
-echo "📁 [2/5] Collecte des fichiers statiques..."
-python manage.py collectstatic --noinput
-echo "✅ Fichiers statiques collectés."
+echo "▶ Subscription plans"
+python manage.py seed_plans
 
-# ---- 3. Superuser creation ----
-echo ""
-echo "👤 [3/5] Création du superuser..."
-export DJANGO_SUPERUSER_USERNAME="${DJANGO_SUPERUSER_USERNAME:-admin}"
-export DJANGO_SUPERUSER_EMAIL="${DJANGO_SUPERUSER_EMAIL:-admin@iacoran.com}"
-export DJANGO_SUPERUSER_PASSWORD="${DJANGO_SUPERUSER_PASSWORD:-admin1234}"
+# The superuser is created only when a password is explicitly provided
+# (no default password baked into the image).
+if [[ -n "${DJANGO_SUPERUSER_PASSWORD:-}" ]]; then
+    echo "▶ Superuser"
+    python manage.py createsuperuser --noinput \
+        --username "${DJANGO_SUPERUSER_USERNAME:-admin}" \
+        --email "${DJANGO_SUPERUSER_EMAIL:-admin@example.com}" 2>/dev/null \
+        || echo "  superuser already exists"
+fi
 
-python manage.py createsuperuser --noinput \
-    --username "$DJANGO_SUPERUSER_USERNAME" \
-    --email "$DJANGO_SUPERUSER_EMAIL" \
-    2>/dev/null || echo "ℹ️  Superuser existe déjà."
-echo "✅ Superuser configuré ($DJANGO_SUPERUSER_USERNAME / $DJANGO_SUPERUSER_EMAIL)"
-
-# ---- 4. Seed plans ----
-echo ""
-echo "🌱 [4/5] Seed des plans d'abonnement..."
-python seed_plans.py
-echo "✅ Plans seedés."
-
-# ---- 6. Start Gunicorn ----
-echo ""
-echo "============================================="
-echo "  🟢 Démarrage de Gunicorn sur le port ${PORT:-8000}"
-echo "============================================="
-
-exec gunicorn core.wsgi:application \
-    --bind "0.0.0.0:${PORT:-8000}" \
-    --workers "${GUNICORN_WORKERS:-2}" \
-    --threads "${GUNICORN_THREADS:-4}" \
-    --timeout "${GUNICORN_TIMEOUT:-120}" \
-    --access-logfile - \
-    --error-logfile -
+echo "▶ Gunicorn on port ${PORT:-8000}"
+exec gunicorn -c gunicorn.conf.py core.wsgi:application

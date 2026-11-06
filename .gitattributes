@@ -1,0 +1,6 @@
+# Shell scripts must keep LF endings to run inside Linux containers
+*.sh text eol=lf
+
+*.npy binary
+*.gz binary
+*.onnx binary

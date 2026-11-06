@@ -1,18 +1,14 @@
 # ==============================================================
-# render.yaml – Blueprint for Render deployment
+# render.yaml – Render Blueprint (https://render.com/docs/blueprint-spec)
 # ==============================================================
-# Render will read this file to auto-configure the service.
-# Docs: https://docs.render.com/blueprint-spec
-# ==============================================================
-
 services:
   - type: web
     name: iacoran-backend
     runtime: docker
     dockerfilePath: ./Dockerfile
-    plan: starter         # Render paid plan (free plan has limited RAM)
-    region: frankfurt      # EU region closest to West Africa
-    healthCheckPath: /api/
+    plan: starter            # ~400 MB RAM used now (was several GB with PyTorch)
+    region: frankfurt        # EU region closest to West Africa
+    healthCheckPath: /api/health/
     envVars:
       # ---- Django ----
       - key: DJANGO_SECRET_KEY
@@ -21,18 +17,24 @@ services:
         value: "false"
       - key: DJANGO_ALLOWED_HOSTS
         value: ".onrender.com"
+      # - key: CORS_ALLOWED_ORIGINS   # e.g. https://corangpt.onrender.com
+      #   value: ""
 
-      # ---- Superuser ----
+      # ---- Superuser (created only if the password is set) ----
       - key: DJANGO_SUPERUSER_USERNAME
         value: admin
       - key: DJANGO_SUPERUSER_EMAIL
         value: admin@iacoran.com
       - key: DJANGO_SUPERUSER_PASSWORD
-        sync: false        # Prompted at deploy time
+        sync: false
 
-      # ---- Gemini AI ----
-      - key: GEMINI_API_KEY
-        sync: false        # Prompted at deploy time
+      # ---- Free LLM providers (tried in this order, at least one key needed) ----
+      - key: GEMINI_API_KEY       # https://aistudio.google.com/apikey
+        sync: false
+      - key: GROQ_API_KEY         # https://console.groq.com/keys (fallback)
+        sync: false
+      - key: CEREBRAS_API_KEY     # https://cloud.cerebras.ai (optional 2nd fallback)
+        sync: false
 
       # ---- Database (Render PostgreSQL) ----
       - key: DATABASE_URL
@@ -40,13 +42,13 @@ services:
           name: iacoran-db
           property: connectionString
 
-      # ---- Gunicorn ----
-      - key: GUNICORN_WORKERS
-        value: "2"
+      # ---- Server sizing ----
+      - key: WEB_CONCURRENCY      # 1 process = model loaded once
+        value: "1"
       - key: GUNICORN_THREADS
-        value: "4"
-      - key: GUNICORN_TIMEOUT
-        value: "120"
+        value: "8"
+      - key: EMBEDDING_THREADS    # matches the fractional CPU of small plans
+        value: "1"
 
 databases:
   - name: iacoran-db

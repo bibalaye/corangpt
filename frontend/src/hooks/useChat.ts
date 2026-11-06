@@ -6,6 +6,20 @@ import { useAuth } from './useAuth'
 /** Generate a unique ID */
 const uid = () => crypto.randomUUID()
 
+/** Time left before the server resets quotas (midnight UTC), e.g. "5h 12m" */
+const timeUntilUtcMidnight = (): string => {
+    const now = new Date()
+    const reset = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)
+    const ms = reset - now.getTime()
+    return `${Math.floor(ms / 3_600_000)}h ${Math.floor((ms % 3_600_000) / 60_000)}m`
+}
+
+/** "5h 12m" -> milliseconds (0 when unparseable) */
+const parseDuration = (label: string | null): number => {
+    const match = label?.match(/(\d+)h\s*(\d+)m/)
+    return match ? (Number(match[1]) * 60 + Number(match[2]) + 1) * 60_000 : 0
+}
+
 /** Create a blank conversation */
 const createConversation = (): Conversation => ({
     id: uid(),
@@ -118,57 +132,26 @@ export function useChat() {
     const currentConversation = conversations.find(c => c.id === currentId) ?? conversations[0];
     const currentMessages = currentConversation.messages;
 
+    // Quota state comes from the server (single source of truth): set when the
+    // API answers "limit_reached", cleared automatically when the quota resets.
     const [isLimitReached, setIsLimitReached] = useState(false);
     const [nextResetTime, setNextResetTime] = useState<string | null>(null);
 
+    const markLimitReached = useCallback((resetTime?: string | null) => {
+        const label = resetTime || timeUntilUtcMidnight()
+        setIsLimitReached(true)
+        setNextResetTime(label)
+        document.dispatchEvent(new CustomEvent('open-limit-modal', { detail: { resetTime: label } }))
+    }, [])
+
     useEffect(() => {
-        const checkLimit = () => {
-            const userStr = localStorage.getItem('user');
-            if (userStr) {
-                try {
-                    const user = JSON.parse(userStr);
-                    // Check if last_request_date is essentially today
-                    // Si date change on the server, requests_today gets reset. 
-                    // Si on a un limit > 0 et que notre compte en memoire est saturé : 
-                    if (user.profile && user.profile.daily_request_limit > 0 && user.profile.requests_today >= user.profile.daily_request_limit) {
-
-                        // Local fallback calculation for reset (midnight tonight)
-                        let timeStr = "";
-                        try {
-                            const now = new Date();
-                            const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-                            tomorrow.setHours(0, 0, 0, 0); // reset at midnight local time
-                            const msDiff = tomorrow.getTime() - now.getTime();
-                            const hoursLeft = Math.floor(msDiff / (1000 * 60 * 60));
-                            const minsLeft = Math.floor((msDiff % (1000 * 60 * 60)) / (1000 * 60));
-                            timeStr = `${hoursLeft}h ${minsLeft}m`;
-                        } catch (e) { }
-
-                        setIsLimitReached(true);
-                        setNextResetTime(timeStr);
-                        return;
-                    }
-                } catch (e) { }
-            }
-            setIsLimitReached(false);
-            setNextResetTime(null);
-        };
-
-        checkLimit();
-        // Optionnel : Re-vérifier quand les événements surviennent
-        window.addEventListener('storage', checkLimit);
-
-        // Timer effect if limit reached
-        let interval: ReturnType<typeof setInterval>;
-        if (isLimitReached) {
-            interval = setInterval(checkLimit, 60000); // refresh every minute
-        }
-
-        return () => {
-            window.removeEventListener('storage', checkLimit);
-            if (interval) clearInterval(interval);
-        }
-    }, [currentMessages.length, isLimitReached]); // Re-vérifier après chaque message (la valeur locale de requests_today y est incrementée)
+        if (!isLimitReached) return
+        const timer = setTimeout(() => {
+            setIsLimitReached(false)
+            setNextResetTime(null)
+        }, parseDuration(nextResetTime) || 60 * 60 * 1000)
+        return () => clearTimeout(timer)
+    }, [isLimitReached, nextResetTime])
 
     // ── Helpers to update messages in the current conversation ──
     const updateMessages = useCallback(
@@ -245,164 +228,91 @@ export function useChat() {
     /** Send a message and stream the response */
     const sendMessage = useCallback(
         async (content: string) => {
-            if (isStreaming || !content.trim()) return
+            const question = content.trim()
+            if (isStreaming || !question) return
 
-            const token = localStorage.getItem('token');
-            if (!token) {
-                document.dispatchEvent(new CustomEvent('open-auth-modal'));
-                return;
+            if (!localStorage.getItem('token')) {
+                document.dispatchEvent(new CustomEvent('open-auth-modal'))
+                return
             }
 
-            const userStr = localStorage.getItem('user');
-            if (userStr) {
-                try {
-                    const user = JSON.parse(userStr);
-                    if (user.profile && user.profile.daily_request_limit > 0 && user.profile.requests_today >= user.profile.daily_request_limit) {
-                        // Let's attempt to calculate reset time
-                        let timeStr = "";
-                        try {
-                            const now = new Date();
-                            const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-                            tomorrow.setHours(0, 0, 0, 0);
-                            const msDiff = tomorrow.getTime() - now.getTime();
-                            const hoursLeft = Math.floor(msDiff / (1000 * 60 * 60));
-                            const minsLeft = Math.floor((msDiff % (1000 * 60 * 60)) / (1000 * 60));
-                            timeStr = `${hoursLeft}h ${minsLeft}m`;
-                        } catch (e) { }
+            const userMsg: Message = { id: uid(), role: 'user', content: question, createdAt: new Date() }
+            const assistantMsg: Message = { id: uid(), role: 'assistant', content: '', isStreaming: true, createdAt: new Date() }
+            const patchAssistant = (patch: (m: Message) => Partial<Message>) =>
+                updateMessages(msgs => msgs.map(m => (m.id === assistantMsg.id ? { ...m, ...patch(m) } : m)))
+            const removeOptimistic = () =>
+                updateMessages(msgs => msgs.filter(m => m.id !== assistantMsg.id && m.id !== userMsg.id))
 
-                        document.dispatchEvent(new CustomEvent('open-limit-modal', { detail: { resetTime: timeStr } }));
-                        return;
-                    }
-                } catch (e) { }
-            }
-
-            const userMsg: Message = {
-                id: uid(),
-                role: 'user',
-                content: content.trim(),
-                createdAt: new Date(),
-            }
-
-            const assistantMsg: Message = {
-                id: uid(),
-                role: 'assistant',
-                content: '',
-                isStreaming: true,
-                createdAt: new Date(),
-            }
-
-            // Add both messages
             updateMessages(msgs => [...msgs, userMsg, assistantMsg])
-
-            // Set conversation title from first question
             if (currentMessages.length === 0) {
-                const title =
-                    content.trim().length > 40
-                        ? content.trim().slice(0, 40) + '…'
-                        : content.trim()
-                updateConversationTitle(title)
+                updateConversationTitle(question.length > 40 ? question.slice(0, 40) + '…' : question)
             }
 
-            // Start streaming
+            // Tokens arrive far faster than the screen refreshes: buffer them and
+            // apply at most one state update (and one Markdown render) per frame.
+            let pending = ''
+            let frame = 0
+            const flush = () => {
+                cancelAnimationFrame(frame)
+                frame = 0
+                if (!pending) return
+                const chunk = pending
+                pending = ''
+                patchAssistant(m => ({ content: m.content + chunk }))
+            }
+
             const controller = new AbortController()
             abortRef.current = controller
             setIsStreaming(true)
 
             try {
                 await streamQuestion(
-                    content.trim(),
+                    question,
                     sourceFilter,
                     {
-                        onSources: (sources: QuranVerse[]) => {
-                            updateMessages(msgs =>
-                                msgs.map(m =>
-                                    m.id === assistantMsg.id ? { ...m, sources } : m
-                                )
-                            )
-                        },
+                        onSources: (sources: QuranVerse[]) => patchAssistant(() => ({ sources })),
                         onToken: (token: string) => {
-                            updateMessages(msgs =>
-                                msgs.map(m =>
-                                    m.id === assistantMsg.id
-                                        ? { ...m, content: m.content + token }
-                                        : m
-                                )
-                            )
+                            pending += token
+                            if (!frame) frame = requestAnimationFrame(flush)
                         },
                         onDone: () => {
-                            updateMessages(msgs =>
-                                msgs.map(m =>
-                                    m.id === assistantMsg.id
-                                        ? { ...m, isStreaming: false }
-                                        : m
-                                )
-                            )
-
-                            // On success, we also update the user requests_today state in local storage to keep sync
-                            const userStr = localStorage.getItem('user');
-                            if (userStr) {
-                                try {
-                                    const user = JSON.parse(userStr);
-                                    if (user.profile) {
-                                        user.profile.requests_today = (user.profile.requests_today || 0) + 1;
-                                        localStorage.setItem('user', JSON.stringify(user));
-                                    }
-                                } catch (e) { }
-                            }
+                            flush()
+                            patchAssistant(() => ({ isStreaming: false }))
                         },
-                        onError: (error: string, errorCode?: string, serverResetTime?: string) => {
-                            if (errorCode === 'limit_reached' || error.includes('Limite de requêtes') || error.includes('403')) {
-                                document.dispatchEvent(new CustomEvent('open-limit-modal', { detail: { resetTime: serverResetTime || nextResetTime || "demain" } }));
-                                // Remove the optimistic messages
-                                updateMessages(msgs => msgs.filter(m => m.id !== assistantMsg.id && m.id !== userMsg.id));
-                                setIsLimitReached(true)
-                                if (serverResetTime) setNextResetTime(serverResetTime)
+                        onError: (error: string, errorCode?: string, resetTime?: string) => {
+                            flush()
+                            if (errorCode === 'limit_reached') {
+                                removeOptimistic()
+                                markLimitReached(resetTime)
                             } else {
-                                updateMessages(msgs =>
-                                    msgs.map(m =>
-                                        m.id === assistantMsg.id
-                                            ? {
-                                                ...m,
-                                                content: `Erreur: ${error}`,
-                                                isStreaming: false,
-                                            }
-                                            : m
-                                    )
-                                )
+                                patchAssistant(m => ({
+                                    content: m.content ? `${m.content}\n\n*${error}*` : error,
+                                    isStreaming: false,
+                                }))
                             }
                         },
                     },
                     controller.signal
                 )
             } catch (err: any) {
-                if (err.name !== 'AbortError') {
-                    if (err.resetTime) {
-                        setNextResetTime(err.resetTime);
-                    }
-                    if (err.message && (err.message.includes('Limite de requêtes') || err.message.includes('403'))) {
-                        document.dispatchEvent(new CustomEvent('open-limit-modal', { detail: { resetTime: err.resetTime || nextResetTime || "demain" } }));
-                        updateMessages(msgs => msgs.filter(m => m.id !== assistantMsg.id && m.id !== userMsg.id));
-                        setIsLimitReached(true)
-                    } else {
-                        updateMessages(msgs =>
-                            msgs.map(m =>
-                                m.id === assistantMsg.id
-                                    ? {
-                                        ...m,
-                                        content: err.message || 'Désolé, une erreur est survenue.',
-                                        isStreaming: false,
-                                    }
-                                    : m
-                            )
-                        )
-                    }
+                flush()
+                if (err.name === 'AbortError') return
+                if (err.status === 403) {
+                    removeOptimistic()
+                    markLimitReached(err.resetTime)
+                } else {
+                    patchAssistant(() => ({
+                        content: err.message || 'Désolé, une erreur est survenue.',
+                        isStreaming: false,
+                    }))
                 }
             } finally {
+                flush()
                 setIsStreaming(false)
                 abortRef.current = null
             }
         },
-        [isStreaming, currentMessages.length, sourceFilter, updateMessages, updateConversationTitle]
+        [isStreaming, currentMessages.length, sourceFilter, updateMessages, updateConversationTitle, markLimitReached]
     )
 
     return {

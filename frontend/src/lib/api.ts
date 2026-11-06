@@ -80,16 +80,27 @@ export async function streamQuestion(
     })
 
     if (!response.ok) {
-        if (response.status === 403) {
-            const data = await response.json().catch(() => ({}));
-            const error = new Error(data.error || 'Limite de requêtes atteinte ou non autorisé.');
-            // @ts-ignore
-            error.resetTime = data.reset_time;
-            throw error;
-        } else if (response.status === 401) {
-            throw new Error('Veuillez vous connecter pour utiliser le chat.');
+        const data = await response.json().catch(() => ({}))
+        const message =
+            response.status === 401 ? 'Veuillez vous connecter pour utiliser le chat.'
+                : data.error || `HTTP ${response.status}: ${response.statusText}`
+        throw Object.assign(new Error(message), { status: response.status, resetTime: data.reset_time })
+    }
+
+    const handle = (line: string) => {
+        if (!line.trim()) return
+        let event: StreamEvent
+        try {
+            event = JSON.parse(line)
+        } catch {
+            return // skip malformed lines
         }
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        switch (event.type) {
+            case 'sources': callbacks.onSources(event.data); break
+            case 'token': callbacks.onToken(event.data); break
+            case 'done': callbacks.onDone(); break
+            case 'error': callbacks.onError(event.data, event.error_code, event.reset_time); break
+        }
     }
 
     const reader = response.body!.getReader()
@@ -99,34 +110,10 @@ export async function streamQuestion(
     while (true) {
         const { done, value } = await reader.read()
         if (done) break
-
         buffer += decoder.decode(value, { stream: true })
         const lines = buffer.split('\n')
-        buffer = lines.pop()! // Keep incomplete line in buffer
-
-        for (const line of lines) {
-            if (!line.trim()) continue
-
-            try {
-                const event: StreamEvent = JSON.parse(line)
-
-                switch (event.type) {
-                    case 'sources':
-                        callbacks.onSources(event.data)
-                        break
-                    case 'token':
-                        callbacks.onToken(event.data)
-                        break
-                    case 'done':
-                        callbacks.onDone()
-                        break
-                    case 'error':
-                        callbacks.onError(event.data, event.error_code, event.reset_time)
-                        break
-                }
-            } catch {
-                // Skip malformed JSON lines
-            }
-        }
+        buffer = lines.pop()! // keep the incomplete line
+        lines.forEach(handle)
     }
+    handle(buffer + decoder.decode())
 }

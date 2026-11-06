@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import { useState, useEffect, memo, lazy, Suspense } from 'react'
 import type { Message } from '../types/chat'
 import { QuranVerse } from './QuranVerse'
 import { useAudioSettings } from '../hooks/useAudioSettings'
+
+const Markdown = lazy(() => import('./Markdown'))
 
 interface MessageBubbleProps {
     message: Message
@@ -16,7 +16,8 @@ interface MessageBubbleProps {
  * Shows a streaming cursor when content is still being generated.
  * Displays Quran verse sources below the response.
  */
-export function MessageBubble({ message }: MessageBubbleProps) {
+// memo: while an answer streams, only that bubble re-renders (not the whole thread)
+export const MessageBubble = memo(function MessageBubble({ message }: MessageBubbleProps) {
     const isUser = message.role === 'user'
     const { autoPlay } = useAudioSettings()
     const [isSpeaking, setIsSpeaking] = useState(false)
@@ -98,9 +99,9 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                         {/* Markdown Content */}
                         <div className="prose-chat text-[15px] leading-[1.6] text-stone-800 dark:text-gray-200">
                             {message.content ? (
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                    {message.content}
-                                </ReactMarkdown>
+                                <Suspense fallback={<p className="whitespace-pre-wrap">{message.content}</p>}>
+                                    <Markdown>{message.content}</Markdown>
+                                </Suspense>
                             ) : message.isStreaming ? (
                                 // Loading skeleton
                                 <div className="space-y-3 animate-pulse">
@@ -136,4 +137,4 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             )}
         </div>
     )
-}
+})

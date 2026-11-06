@@ -1,10 +1,17 @@
 from django.urls import path
+
 from .views import (
-    QuranSearchView, QuranAskView, quran_ask_stream, 
-    RegisterView, LoginView, ChatHistoryListView
+    ChatHistoryListView,
+    LoginView,
+    QuranAskView,
+    QuranSearchView,
+    RegisterView,
+    health,
+    quran_ask_stream,
 )
 
 urlpatterns = [
+    path('health/', health, name='health'),
     path('auth/register/', RegisterView.as_view(), name='register'),
     path('auth/login/', LoginView.as_view(), name='login'),
     path('history/', ChatHistoryListView.as_view(), name='chat_history'),

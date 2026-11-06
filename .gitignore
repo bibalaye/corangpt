@@ -35,15 +35,12 @@ static_collected/
 # ============================================================
 # ML / Data (large files)
 # ============================================================
-quran_indexed.json
-quran_faiss.index
-hadith_indexed.json
-hadith_faiss.index
-# Allow the zip for Docker deployment
-!quran_indexed.zip
-!hadith_indexed.zip
-
-
+# ONNX model: downloaded on first run / during the Docker build
+models/
+# Legacy indexes (replaced by data/index/, ~25 MB)
+*_indexed.json
+*_indexed.zip
+*.index
 *.h5
 *.pkl
 *.pt

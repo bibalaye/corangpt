@@ -23,7 +23,8 @@ RUN python -m quran_api.services.model_assets /build/full
 ARG VOCAB_TOP=40000
 COPY scripts/trim_vocab.py scripts/trim_vocab.py
 COPY data/index/docs.json.gz data/index/docs.json.gz
-RUN python scripts/trim_vocab.py /build/full /build/model --top "${VOCAB_TOP}"
+RUN python scripts/trim_vocab.py /build/full /build/model --top "${VOCAB_TOP}" \
+    && chmod -R a+rX /build/model
 
 # ---------- Stage 2: runtime ----------
 FROM python:3.13-slim

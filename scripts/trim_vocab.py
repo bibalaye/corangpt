@@ -76,7 +76,8 @@ def main() -> None:
     args.dst.mkdir(parents=True, exist_ok=True)
     onnx.save(model, str(args.dst / "model.onnx"))
     np.save(args.dst / "kept_ids.npy", kept_ids)
-    shutil.copy(args.src / "sentencepiece.bpe.model", args.dst / "sentencepiece.bpe.model")
+    # copyfile, not copy: never carry over a restrictive source mode (the app runs as non-root)
+    shutil.copyfile(args.src / "sentencepiece.bpe.model", args.dst / "sentencepiece.bpe.model")
 
     print(
         f"kept {len(kept_ids)}/{weights.shape[0]} tokens (corpus: {corpus}) — "

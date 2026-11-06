@@ -73,6 +73,8 @@ def ensure_model(target_dir: str | os.PathLike) -> Path:
                 raise RuntimeError(
                     f"Checksum mismatch for {remote_path}: expected {expected_sha}, got {actual}"
                 )
+            # mkstemp creates the file as 0600: make it readable by the non-root app user
+            os.chmod(tmp, 0o644)
             tmp.replace(dest)
         finally:
             tmp.unlink(missing_ok=True)
